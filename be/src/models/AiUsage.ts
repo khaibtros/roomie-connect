@@ -18,7 +18,6 @@ const aiUsageSchema = new Schema<IAiUsage>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
     prompt: {
       type: String,

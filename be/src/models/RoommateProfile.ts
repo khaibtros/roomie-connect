@@ -221,7 +221,6 @@ const roommateProfileSchema = new Schema<IRoommateProfile>(
   },
 );
 
-roommateProfileSchema.index({ userId: 1 });
 roommateProfileSchema.index({ isPublic: 1 });
 
 export const RoommateProfile = mongoose.model<IRoommateProfile>(

@@ -28,8 +28,4 @@ const favoriteSchema = new Schema<IFavorite>(
 // Ensure unique constraint on (userId, roomId)
 favoriteSchema.index({ userId: 1, roomId: 1 }, { unique: true });
 
-// Index for faster queries
-favoriteSchema.index({ userId: 1 });
-favoriteSchema.index({ roomId: 1 });
-
 export const Favorite = mongoose.model<IFavorite>("Favorite", favoriteSchema);
