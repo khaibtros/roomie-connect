@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, ArrowLeft, UserPlus, Building2, User, Shield } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, UserPlus, Building2, User, Shield, Check, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -72,6 +72,15 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // OTP verification states
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(0);
+  const [mockOtpCode, setMockOtpCode] = useState(''); // For demo purposes
+
   const config = roleConfig[role];
   const Icon = config.icon;
 
@@ -91,6 +100,88 @@ export default function Register() {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  // Countdown timer for OTP resend
+  useEffect(() => {
+    if (otpCountdown > 0) {
+      const timer = setTimeout(() => setOtpCountdown(otpCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpCountdown]);
+
+  // Send OTP to email
+  const handleSendOtp = async () => {
+    // Validate email
+    if (!formData.email) {
+      setErrors((prev) => ({ ...prev, email: 'Vui lòng nhập email' }));
+      return;
+    }
+    
+    const emailSchema = z.string().email('Email không hợp lệ');
+    const emailValidation = emailSchema.safeParse(formData.email);
+    
+    if (!emailValidation.success) {
+      setErrors((prev) => ({ ...prev, email: 'Email không hợp lệ' }));
+      return;
+    }
+
+    setIsSendingOtp(true);
+    
+    // Simulate API call to send OTP
+    try {
+      // In real application, call backend API to send OTP
+      // const { data, error } = await apiClient.sendOtp(formData.email);
+      
+      // For demo: Generate random OTP
+      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      setMockOtpCode(generatedOtp);
+      
+      setIsOtpSent(true);
+      setOtpCountdown(60); // 60 seconds countdown
+      toast.success(`Mã OTP đã được gửi đến ${formData.email}`);
+      toast.info(`(Demo) Mã OTP: ${generatedOtp}`, { duration: 10000 });
+    } catch (error) {
+      toast.error('Không thể gửi mã OTP. Vui lòng thử lại.');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  // Verify OTP
+  const handleVerifyOtp = async () => {
+    if (!otpCode) {
+      toast.error('Vui lòng nhập mã OTP');
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    
+    try {
+      // In real application, call backend API to verify OTP
+      // const { data, error } = await apiClient.verifyOtp(formData.email, otpCode);
+      
+      // For demo: Compare with mock OTP
+      if (otpCode === mockOtpCode) {
+        setEmailVerified(true);
+        setIsOtpSent(false);
+        setOtpCode('');
+        toast.success('Email xác thực thành công!');
+      } else {
+        toast.error('Mã OTP không chính xác. Vui lòng thử lại.');
+      }
+    } catch (error) {
+      toast.error('Lỗi xác thực OTP. Vui lòng thử lại.');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  // Resend OTP
+  const handleResendOtp = () => {
+    if (otpCountdown === 0) {
+      handleSendOtp();
     }
   };
 
@@ -190,16 +281,84 @@ export default function Register() {
 
             <div className="space-y-2">
               <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="email@example.com"
-                value={formData.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                className={errors.email ? 'border-destructive' : ''}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="email@example.com"
+                  value={formData.email}
+                  onChange={(e) => handleChange('email', e.target.value)}
+                  disabled={emailVerified}
+                  className={errors.email ? 'border-destructive' : ''}
+                />
+                {!emailVerified && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSendOtp}
+                    disabled={isSendingOtp || isOtpSent || !formData.email}
+                    className="whitespace-nowrap"
+                  >
+                    {isSendingOtp ? 'Đang gửi...' : 'Gửi OTP'}
+                  </Button>
+                )}
+                {emailVerified && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-green-50 text-green-700 border border-green-200">
+                    <Check className="h-4 w-4" />
+                    <span className="text-sm font-medium">Đã xác thực</span>
+                  </div>
+                )}
+              </div>
               {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
             </div>
+
+            {/* OTP Verification Section */}
+            {isOtpSent && !emailVerified && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-2 p-3 bg-blue-50 border border-blue-200 rounded-lg"
+              >
+                <Label htmlFor="otp">Nhập mã OTP *</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="otp"
+                    type="text"
+                    placeholder="Nhập 6 chữ số"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    maxLength={6}
+                    className="text-center tracking-widest"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    disabled={isVerifyingOtp || otpCode.length !== 6}
+                    className="whitespace-nowrap"
+                  >
+                    {isVerifyingOtp ? 'Đang xác thực...' : 'Xác thực'}
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <p className="text-muted-foreground">Mã OTP đã được gửi đến email của bạn</p>
+                  {otpCountdown > 0 ? (
+                    <div className="flex items-center gap-1 text-amber-600">
+                      <Clock className="h-3 w-3" />
+                      <span>Gửi lại trong {otpCountdown}s</span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      Gửi lại mã
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="password">Mật khẩu *</Label>
@@ -210,7 +369,8 @@ export default function Register() {
                   placeholder="Tối thiểu 6 ký tự"
                   value={formData.password}
                   onChange={(e) => handleChange('password', e.target.value)}
-                  className={errors.password ? 'border-destructive pr-10' : 'pr-10'}
+                  disabled={!emailVerified}
+                  className={`${errors.password ? 'border-destructive pr-10' : 'pr-10'}`}
                 />
                 <button
                   type="button"
@@ -231,6 +391,7 @@ export default function Register() {
                   <Select 
                     value={formData.university} 
                     onValueChange={(value) => handleChange('university', value)}
+                    disabled={!emailVerified}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Chọn trường" />
@@ -250,6 +411,7 @@ export default function Register() {
                     placeholder="Công ty ABC"
                     value={formData.workplace}
                     onChange={(e) => handleChange('workplace', e.target.value)}
+                    disabled={!emailVerified}
                   />
                 </div>
               </>
@@ -264,6 +426,7 @@ export default function Register() {
                     placeholder=""
                     value={formData.phone}
                     onChange={(e) => handleChange('phone', e.target.value)}
+                    disabled={!emailVerified}
                     className={errors.phone ? 'border-destructive' : ''}
                   />
                   {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
@@ -274,6 +437,7 @@ export default function Register() {
                   <Select 
                     value={formData.bank_name} 
                     onValueChange={(value) => handleChange('bank_name', value)}
+                    disabled={!emailVerified}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Chọn ngân hàng" />
@@ -293,6 +457,7 @@ export default function Register() {
                     placeholder=""
                     value={formData.bank_account}
                     onChange={(e) => handleChange('bank_account', e.target.value)}
+                    disabled={!emailVerified}
                   />
                 </div>
               </>
@@ -302,7 +467,7 @@ export default function Register() {
               type="submit" 
               className="w-full rounded-full mt-6" 
               size="lg"
-              disabled={isLoading}
+              disabled={isLoading || !emailVerified}
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
