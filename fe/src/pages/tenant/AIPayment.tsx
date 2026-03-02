@@ -36,45 +36,45 @@ interface PaymentMethod {
 
 const AI_PACKAGES: AIPackage[] = [
   {
-    id: "basic",
-    name: "Gói Cơ Bản",
-    description: "Phù hợp cho học sinh, sinh viên",
-    price: 39999,
-    monthlyCredit: 5,
+    id: "free",
+    name: "Free",
+    description: "Tính năng cơ bản",
+    price: 0,
+    monthlyCredit: 0,
     features: [
-      "5 lượt trò chuyện với AI",
-      "Tìm phòng nâng cao",
-      "Filter theo tiêu chí",
+      "Tìm kiếm và lọc cơ bản",
+      "Truy cập ưu tiên vào danh sách mới",
+      "Trò chuyện AI giới hạn hàng ngày",
+      "Tương thích tìm kiếm bạn phòng (2 lần/ngày)",
     ],
   },
   {
-    id: "standard",
-    name: "Gói Tiêu Chuẩn",
-    description: "Phù hợp cho người mới",
-    price: 69999,
-    monthlyCredit: 10,
+    id: "aiplus",
+    name: "AI Plus - 1 Tháng",
+    description: "Dùng thử AI không giới hạn",
+    price: 49000,
+    monthlyCredit: 30,
     features: [
-      "10 lượt trò chuyện với AI",
-      "Tìm phòng thông minh",
-      "Phân tích chi tiết",
-      "Báo cáo tùy chỉnh",
+      "Tìm kiếm và lọc cơ bản",
+      "Truy cập ưu tiên vào danh sách mới",
+      "Trò chuyện AI không giới hạn",
+      "Tương thích tìm kiếm bạn phòng (3 lần/ngày)",
+      "Lịch sử giá cho thuê",
     ],
     popular: true,
   },
   {
-    id: "premium",
-    name: "Gói Cao Câp",
-    description: "Cho chuyên nghiệp",
-    price: 109999,
-    monthlyCredit: 15,
+    id: "aipro",
+    name: "AI Pro - 3 Tháng",
+    description: "Tính năng nâng cao đầy đủ",
+    price: 129000,
+    monthlyCredit: 90,
     features: [
-      "15 lượt trò chuyện với AI",
-      "Tìm phòng thông minh",
-      "Phân tích chi tiết",
-      "Hỗ trợ ưu tiên 24/7",
-      "Báo cáo tùy chỉnh",
-      "Không giới hạn lọc",
-      "Tư vấn chuyên gia",
+      "Tìm kiếm và lọc cơ bản",
+      "Truy cập ưu tiên vào danh sách mới",
+      "Trò chuyện AI không giới hạn + Tính năng nâng cao",
+      "Tương thích tìm kiếm bạn phòng không giới hạn",
+      "Lịch sử giá cho thuê",
     ],
   },
 ];
@@ -103,7 +103,7 @@ const PAYMENT_METHODS: PaymentMethod[] = [
 export default function AIPayment() {
   const navigate = useNavigate();
 
-  const [selectedPackage, setSelectedPackage] = useState<string>("standard");
+  const [selectedPackage, setSelectedPackage] = useState<string>("aiplus");
   const [selectedPayment, setSelectedPayment] = useState<string>("credit_card");
   const [isProcessing, setIsProcessing] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
@@ -198,7 +198,7 @@ export default function AIPayment() {
                         {formatPrice(pkg.price)}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {pkg.monthlyCredit} tin nhắn/tháng
+                        
                       </p>
                     </div>
 
@@ -368,20 +368,20 @@ export default function AIPayment() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
               {
-                q: "Tôi có thể thay đổi gói dịch vụ không?",
-                a: "Có, bạn có thể nâng cấp hoặc hạ cấp gói bất kỳ lúc nào. Phí sẽ được tính toán theo số ngày còn lại.",
+                q: "Tôi có thể nâng cấp gói bất kỳ lúc nào không?",
+                a: "Có, bạn có thể nâng cấp từ Free lên AI Plus hoặc AI Pro bất kỳ lúc nào. Phí sẽ được tính toán theo thời gian sử dụng.",
               },
               {
-                q: "Thanh toán như thế nào?",
-                a: "Chúng tôi hỗ trợ thẻ tín dụng, chuyển khoản ngân hàng và ví điện tử. Quá trình thanh toán được mã hóa 256-bit.",
+                q: "Gói AI Plus cung cấp bao lâu?",
+                a: "Gói AI Plus cung cấp dịch vụ trong 1 tháng. Gói AI Pro cung cấp dịch vụ trong 3 tháng với giá rẻ hơn so với mua 3 lần AI Plus.",
               },
               {
-                q: "Nếu tôi không hài lòng?",
-                a: "Chúng tôi cung cấp hoàn tiền 100% trong 30 ngày nếu bạn không hài lòng.",
+                q: "Tôi có thể hoàn tiền không?",
+                a: "Chúng tôi cung cấp hoàn tiền 100% trong 7 ngày nếu bạn không hài lòng với dịch vụ.",
               },
               {
-                q: "Tin nhắn chưa dùng có giữ lại được không?",
-                a: "Có, tin nhắn chưa dùng sẽ giữ lại trong tháng hiện tại. Nó sẽ được reset khi bắt đầu tháng mới.",
+                q: "Lượt trò chuyện AI không dùng hết có giữ được không?",
+                a: "Các lượt trò chuyện sẽ được reset khi gói hết hạn. Chúng tôi khuyến nghị sử dụng hết các lượt trong thời hạn gói.",
               },
             ].map((item, idx) => (
               <div

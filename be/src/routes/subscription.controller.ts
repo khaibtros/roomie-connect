@@ -2,19 +2,28 @@ import { Request, Response } from "express";
 import { Subscription, SubscriptionPackage } from "../models";
 import { Types } from "mongoose";
 
-// Subscription package prices
-const PACKAGE_PRICES: Record<SubscriptionPackage, number> = {
-  monthly: 300000,
-  six_month: 1500000,
-  yearly: 3000000,
+// Subscription package prices (Maintenance fees)
+const PACKAGE_PRICES: Record<SubscriptionPackage, { maintenance: number; commission: number }> = {
+  three_month: {
+    maintenance: 1050000,
+    commission: 200000,
+  },
+  six_month: {
+    maintenance: 1920000,
+    commission: 200000,
+  },
+  yearly: {
+    maintenance: 3360000,
+    commission: 200000,
+  },
 };
 
 // Calculate end date based on package type
 const calculateEndDate = (startDate: Date, packageType: SubscriptionPackage): Date => {
   const end = new Date(startDate);
   switch (packageType) {
-    case "monthly":
-      end.setMonth(end.getMonth() + 1);
+    case "three_month":
+      end.setMonth(end.getMonth() + 3);
       break;
     case "six_month":
       end.setMonth(end.getMonth() + 6);
@@ -57,7 +66,8 @@ export const getCurrentSubscription = async (req: Request, res: Response) => {
         packageType: subscription.packageType,
         startDate: subscription.startDate,
         endDate: subscription.endDate,
-        amount: subscription.amount,
+        maintenanceFee: subscription.maintenanceFee,
+        commissionPerContract: subscription.commissionPerContract,
         status: subscription.status,
       },
     });
@@ -78,14 +88,14 @@ export const subscribe = async (req: Request, res: Response) => {
       return;
     }
 
-    if (!packageType || !["monthly", "six_month", "yearly"].includes(packageType)) {
+    if (!packageType || !["three_month", "six_month", "yearly"].includes(packageType)) {
       res.status(400).json({ error: "Invalid package type" });
       return;
     }
 
     console.log(`💳 Processing subscription for landlord: ${landlordId}, Package: ${packageType}`);
 
-    const amount = PACKAGE_PRICES[packageType as SubscriptionPackage];
+    const packageInfo = PACKAGE_PRICES[packageType as SubscriptionPackage];
     const startDate = new Date();
     const endDate = calculateEndDate(startDate, packageType as SubscriptionPackage);
 
@@ -98,13 +108,16 @@ export const subscribe = async (req: Request, res: Response) => {
       startDate,
       endDate,
       status: "active",
-      amount,
+      maintenanceFee: packageInfo.maintenance,
+      commissionPerContract: packageInfo.commission,
       paymentId: `PAY_${Date.now()}`, // Mock payment ID
     });
 
     await subscription.save();
 
     console.log(`✅ Subscription created: ${subscription._id}`);
+    console.log(`   Package: ${packageType}`);
+    console.log(`   Maintenance: ${packageInfo.maintenance}`);
     console.log(`   End date: ${endDate}`);
 
     res.status(201).json({
@@ -114,7 +127,8 @@ export const subscribe = async (req: Request, res: Response) => {
         packageType: subscription.packageType,
         startDate: subscription.startDate,
         endDate: subscription.endDate,
-        amount: subscription.amount,
+        maintenanceFee: subscription.maintenanceFee,
+        commissionPerContract: subscription.commissionPerContract,
         status: subscription.status,
       },
     });
@@ -129,28 +143,64 @@ export const getPackages = async (req: Request, res: Response) => {
   try {
     const packages = [
       {
-        type: "monthly",
-        name: "Gói 1 tháng",
-        price: 300000,
-        duration: "1 month",
+        type: "three_month",
+        name: "Gói 3 Tháng",
+        duration: "3 months",
+        maintenanceFee: 1050000,
+        commissionPerContract: 200000,
         description: "Phù hợp với người mới bắt đầu",
         recommended: false,
+        features: {
+          maintenanceDisplay: "1.050.000 VNĐ",
+          commission: "200.000 VNĐ",
+          postsPerRoom: "1 tin / phòng",
+          continuousDisplay: true,
+          freeEdit: true,
+          verificationBadge: true,
+          basicPriority: true,
+          aiSuggestions: true,
+          analytics: "Cơ bản",
+        },
       },
       {
         type: "six_month",
-        name: "Gói 6 tháng",
-        price: 1500000,
+        name: "Gói 6 Tháng",
         duration: "6 months",
-        description: "Phổ biến nhất",
+        maintenanceFee: 1920000,
+        commissionPerContract: 200000,
+        description: "Phổ biến nhất - Tiết kiệm 17%",
         recommended: true,
+        features: {
+          maintenanceDisplay: "1.920.000 VNĐ",
+          commission: "200.000 VNĐ",
+          postsPerRoom: "1 tin / phòng",
+          continuousDisplay: true,
+          freeEdit: true,
+          verificationBadge: true,
+          basicPriority: true,
+          aiSuggestions: true,
+          analytics: "Nâng cao",
+        },
       },
       {
         type: "yearly",
-        name: "Gói 1 năm",
-        price: 3000000,
+        name: "Gói 1 Năm",
         duration: "12 months",
-        description: "Tiết kiệm nhất",
+        maintenanceFee: 3360000,
+        commissionPerContract: 200000,
+        description: "Tiết kiệm tối đa - Ưu tiên cao nhất",
         recommended: false,
+        features: {
+          maintenanceDisplay: "3.360.000 VNĐ",
+          commission: "200.000 VNĐ",
+          postsPerRoom: "1 tin / phòng",
+          continuousDisplay: true,
+          freeEdit: true,
+          verificationBadge: true,
+          basicPriority: "✔ (ưu tiên cao nhất)",
+          aiSuggestions: "✔ (ưu tiên ghép nối)",
+          analytics: "Full dashboard",
+        },
       },
     ];
 

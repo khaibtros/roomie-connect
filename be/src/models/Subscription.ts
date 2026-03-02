@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 
-export type SubscriptionPackage = "monthly" | "six_month" | "yearly";
+export type SubscriptionPackage = "three_month" | "six_month" | "yearly";
 export type SubscriptionStatus = "active" | "expired" | "cancelled";
 
 export interface ISubscription extends Document {
@@ -9,7 +9,8 @@ export interface ISubscription extends Document {
   startDate: Date;
   endDate: Date;
   status: SubscriptionStatus;
-  amount: number;
+  maintenanceFee: number; // Phí duy trì đăng tin
+  commissionPerContract: number; // Hoa hồng per contract
   paymentId?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -25,7 +26,7 @@ const subscriptionSchema = new Schema<ISubscription>(
     },
     packageType: {
       type: String,
-      enum: ["monthly", "six_month", "yearly"],
+      enum: ["three_month", "six_month", "yearly"],
       required: true,
     },
     startDate: {
@@ -42,9 +43,14 @@ const subscriptionSchema = new Schema<ISubscription>(
       enum: ["active", "expired", "cancelled"],
       default: "active",
     },
-    amount: {
+    maintenanceFee: {
       type: Number,
       required: true,
+    },
+    commissionPerContract: {
+      type: Number,
+      required: true,
+      default: 200000,
     },
     paymentId: {
       type: String,
