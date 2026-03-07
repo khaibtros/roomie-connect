@@ -68,6 +68,32 @@ export default function RoomDetail() {
     }
   }, [id]);
 
+  const trackViewedRoom = (roomData: any) => {
+    try {
+      if (!roomData || !roomData.id) return;
+      
+      const viewedRoomsDetail = JSON.parse(localStorage.getItem('viewedRoomsDetail') || '[]');
+      
+      // Remove if already exists (to update timestamp)
+      const filtered = viewedRoomsDetail.filter((r: any) => r.id !== roomData.id);
+      
+      // Add new entry with full data
+      const viewedRoom = {
+        id: roomData.id,
+        title: roomData.title || 'Phòng',
+        price: roomData.price || 0,
+        location: roomData.location || roomData.address || 'Không xác định',
+        image: roomData.images?.[0] || '/placeholder.png',
+        viewedAt: new Date().toISOString(),
+      };
+      
+      filtered.push(viewedRoom);
+      localStorage.setItem('viewedRoomsDetail', JSON.stringify(filtered));
+    } catch (error) {
+      console.error('Error tracking viewed room:', error);
+    }
+  };
+
   const fetchRoom = async () => {
     try {
       setLoading(true);
@@ -76,7 +102,13 @@ export default function RoomDetail() {
       if (error) {
         throw new Error(error);
       }
-      setRoom(data?.room ? mapApiRoomToUiRoom(data.room) : null);
+      const roomData = data?.room ? mapApiRoomToUiRoom(data.room) : null;
+      setRoom(roomData);
+      
+      // Track viewed room after successful load
+      if (roomData) {
+        trackViewedRoom(roomData);
+      }
     } catch (error) {
       console.error("Error fetching room:", error);
       toast.error("Không thể tải thông tin phòng");

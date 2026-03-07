@@ -364,6 +364,51 @@ class ApiClient {
   async getAiTokens() {
     return this.request<{ tokens: number; maxTokens: number }>('/ai/tokens');
   }
+
+  // Subscription endpoints
+  async getSubscriptionPackages() {
+    return this.request<{ packages: any[] }>('/subscription/packages');
+  }
+
+  async getCurrentSubscription() {
+    return this.request<{ subscription: any }>('/subscription/current');
+  }
+
+  async subscribe(packageType: string) {
+    return this.request<{ subscription: any }>('/subscription/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ packageType }),
+    });
+  }
+
+  // Contract endpoints
+  async getLandlordContracts() {
+    return this.request<{ contracts: any[] }>('/contracts/landlord');
+  }
+
+  async getContractDetail(id: string) {
+    return this.request<{ contract: any }>(`/contracts/${id}`);
+  }
+
+  async approveContract(id: string) {
+    return this.request<{ contract: any }>(`/contracts/${id}/approve`, {
+      method: 'POST',
+    });
+  }
+
+  async rejectContract(id: string, reason: string) {
+    return this.request<{ contract: any }>(`/contracts/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async createContractRequest(roomId: string) {
+    return this.request<{ contractRequest: string }>('/contracts/request', {
+      method: 'POST',
+      body: JSON.stringify({ roomId }),
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

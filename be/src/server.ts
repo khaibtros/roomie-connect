@@ -31,20 +31,23 @@ app.use(errorMiddleware);
 // Start server
 const startServer = async () => {
   try {
+    console.log(`\n🚀 Starting Roomie Connect API Server...\n`);
+    
     await connectDatabase();
 
     app.listen(PORT, () => {
       console.log(`
-🚀 Roomie Connect API Server
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📡 Server running on port ${PORT}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎉 Roomie Connect API Ready!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📡 Server: http://localhost:${PORT}
 🔗 API: http://localhost:${PORT}/api
-❤️  Health: http://localhost:${PORT}/api/health
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      `);
+📊 Health: http://localhost:${PORT}/api/health
+🔐 JWT Secret: ${process.env.JWT_SECRET ? '✓ Configured' : '⚠️ Using default'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     });
   } catch (error) {
-    console.error("Failed to start server:", error);
+    console.error("\n❌ Failed to start server:", error);
     process.exit(1);
   }
 };

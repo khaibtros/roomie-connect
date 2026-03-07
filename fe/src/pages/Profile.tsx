@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { 
   User, 
   Settings, 
@@ -18,19 +19,52 @@ import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 
 export default function Profile() {
   const navigate = useNavigate();
   const { user, isAuthenticated, signOut, loading, role } = useAuth();
+  const [savedCount, setSavedCount] = useState(0);
+  const [viewedCount, setViewedCount] = useState(0);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchStats();
+    } else {
+      setStatsLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  const fetchStats = async () => {
+    try {
+      setStatsLoading(true);
+      
+      // Fetch saved rooms count
+      const favoritesRes = await apiClient.getFavorites();
+      if (favoritesRes.data) {
+        const favorites = favoritesRes.data.favorites || favoritesRes.data.rooms || [];
+        setSavedCount(Array.isArray(favorites) ? favorites.length : 0);
+      }
+      
+      // Get viewed rooms from localStorage (unique rooms viewed)
+      const viewedRooms = JSON.parse(localStorage.getItem('viewedRooms') || '[]');
+      setViewedCount(viewedRooms.length);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   const MENU_ITEMS = [
-    { icon: Heart, label: 'Phòng đã lưu', badge: '3', action: () => navigate('/saved-rooms') },
-    { icon: Clock, label: 'Lịch sử xem', action: () => navigate('/history') },
+    { icon: Heart, label: 'Phòng đã lưu', badge: savedCount.toString(), action: () => navigate('/saved-rooms') },
+    { icon: Clock, label: 'Lịch sử xem', badge: viewedCount.toString(), action: () => navigate('/history') },
     { icon: Bell, label: 'Thông báo', badge: '2', action: () => navigate('/notifications') },
     { icon: Shield, label: 'Quyền riêng tư', action: () => navigate('/privacy') },
     { icon: Lock, label: 'Đổi Mật Khẩu', action: () => navigate('/auth/change-password') },
-    { icon: Star, label: 'Đánh giá ứng dụng', action: () => {} },
+    { icon: Star, label: 'Đánh giá ứng dụng', action: () => navigate('/app-rating') },
     { icon: HelpCircle, label: 'Trợ giúp & Hỗ trợ', action: () => navigate('/support') },
   ];
 
@@ -136,14 +170,14 @@ export default function Profile() {
         </motion.div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="glass-card rounded-2xl p-4 text-center"
           >
-            <p className="text-2xl font-bold gradient-text">3</p>
+            <p className="text-2xl font-bold gradient-text">{statsLoading ? '-' : savedCount}</p>
             <p className="text-xs text-muted-foreground">Phòng đã lưu</p>
           </motion.div>
           <motion.div
@@ -152,17 +186,8 @@ export default function Profile() {
             transition={{ delay: 0.15 }}
             className="glass-card rounded-2xl p-4 text-center"
           >
-            <p className="text-2xl font-bold gradient-text">12</p>
+            <p className="text-2xl font-bold gradient-text">{statsLoading ? '-' : viewedCount}</p>
             <p className="text-xs text-muted-foreground">Lượt xem</p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass-card rounded-2xl p-4 text-center"
-          >
-            <p className="text-2xl font-bold gradient-text">5</p>
-            <p className="text-xs text-muted-foreground">Match</p>
           </motion.div>
         </div>
 

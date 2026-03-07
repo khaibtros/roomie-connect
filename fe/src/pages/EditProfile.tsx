@@ -32,7 +32,7 @@ type LandlordFormData = z.infer<typeof landlordProfileSchema>;
 
 export default function EditProfile() {
   const navigate = useNavigate();
-  const { user, role, isAuthenticated, loading: authLoading } = useAuth();
+  const { user, role, isAuthenticated, loading: authLoading, refreshUser } = useAuth();
 
   // Form state
   const [fullName, setFullName] = useState('');
@@ -113,6 +113,9 @@ export default function EditProfile() {
         toast.error('Lỗi: ' + error);
         return;
       }
+
+      // Refresh user data from backend
+      await refreshUser();
 
       toast.success('Hồ sơ đã được cập nhật thành công!');
       navigate('/profile');

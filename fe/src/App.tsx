@@ -26,11 +26,21 @@ import TenantAIPayment from "./pages/tenant/AIPayment";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminRooms from "./pages/admin/Rooms";
 import AdminUsers from "./pages/admin/Users";
+import AdminReports from "./pages/admin/Reports";
+import AdminTransactions from "./pages/admin/Transactions";
+import AdminSettings from "./pages/admin/Settings";
 import LandlordDashboard from "./pages/landlord/Dashboard";
 import LandlordPosts from "./pages/landlord/Posts";
 import LandlordWallet from "./pages/landlord/Wallet";
 import LandlordProfile from "./pages/landlord/Profile";
 import CreatePost from "./pages/landlord/CreatePost";
+import LandlordSubscription from "./pages/landlord/Subscription";
+import ContractManagement from "./pages/landlord/ContractManagement";
+import History from "./pages/History";
+import Notifications from "./pages/Notifications";
+import Privacy from "./pages/Privacy";
+import Support from "./pages/Support";
+import AppRating from "./pages/AppRating";
 
 
 const queryClient = new QueryClient();
@@ -123,6 +133,22 @@ const App = () => (
               }
             />
             <Route
+              path="/landlord/subscription"
+              element={
+                <ProtectedRoute role="landlord">
+                  <LandlordSubscription />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/landlord/contracts"
+              element={
+                <ProtectedRoute role="landlord">
+                  <ContractManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/landlord/create-post"
               element={
                 <ProtectedRoute role="landlord">
@@ -177,12 +203,41 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/reports"
+              element={
+                <ProtectedRoute role="admin">
+                  <AdminReports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/transactions"
+              element={
+                <ProtectedRoute role="admin">
+                  <AdminTransactions />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedRoute role="admin">
+                  <AdminSettings />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
 
             <Route path="/quiz" element={<Quiz />} />
             <Route path="/matches" element={<Matches />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/history" element={<History />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/support" element={<Support />} />
+            <Route path="/app-rating" element={<AppRating />} />
             <Route
               path="/edit-profile"
               element={

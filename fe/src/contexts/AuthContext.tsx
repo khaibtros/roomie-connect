@@ -37,6 +37,7 @@ interface AuthContextType {
   useAiToken: () => boolean;
   setAiTokens: React.Dispatch<React.SetStateAction<number>>;
   refreshAiTokens: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -96,7 +97,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const roleFor = DEMO_ACCOUNT_ROLE[email];
     if (!roleFor) return;
 
+    // Clear any existing token before seeding new account
+    apiClient.setToken(null);
     setRole(roleFor);
+    
     if (roleFor === 'landlord') {
       setWalletBalance(5000000);
       setAiTokens(0);
@@ -147,9 +151,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: null };
     }
 
+    // Clear any existing token before registering with new account
+    apiClient.setToken(null);
+
     // Call backend API to register
     try {
-      const fullName = metadata?.fullName as string || email.split('@')[0];
+      const fullName = (metadata?.full_name as string) || (metadata?.fullName as string) || email.split('@')[0];
       const { data, error } = await apiClient.register(email, password, fullName, roleArg);
 
       if (error) {
@@ -175,6 +182,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: null };
     }
 
+    // Clear any existing token before logging in with new credentials
+    apiClient.setToken(null);
+    
     // Call backend API to login
     try {
       const { data, error } = await apiClient.login(email, password);
@@ -276,6 +286,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Refresh user data from backend (after profile update)
+  const refreshUser = async () => {
+    try {
+      const { data, error } = await apiClient.getProfile();
+      if (data && !error) {
+        setUser(data.user);
+      }
+    } catch (err) {
+      console.error('Failed to refresh user:', err);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -294,6 +316,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       useAiToken,
       setAiTokens,
       refreshAiTokens,
+      refreshUser,
     }}>
       {children}
     </AuthContext.Provider>

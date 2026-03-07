@@ -14,6 +14,8 @@ router.post("/register", async (req: Request, res: Response) => {
   try {
     const { email, password, fullName, role = "tenant" } = req.body;
 
+    console.log(`\n📝 REGISTER REQUEST: ${email}`);
+
     // Validation
     if (!email || !password || !fullName) {
       res
@@ -23,16 +25,20 @@ router.post("/register", async (req: Request, res: Response) => {
     }
 
     // Check if user exists
+    console.log(`🔍 Checking if user exists: ${email}`);
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
+      console.log(`⚠️ User already exists: ${email}`);
       res.status(400).json({ error: "User already exists with this email" });
       return;
     }
 
     // Hash password
+    console.log(`🔐 Hashing password...`);
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
+    console.log(`👤 Creating user object for: ${email}`);
     const user = new User({
       email: email.toLowerCase(),
       password: hashedPassword,
@@ -40,11 +46,16 @@ router.post("/register", async (req: Request, res: Response) => {
       role: ["admin", "landlord", "tenant"].includes(role) ? role : "tenant",
     });
 
-    await user.save();
+    console.log(`💾 Saving user to database...`);
+    const savedUser = await user.save();
+    console.log(`✅ USER SAVED SUCCESSFULLY!`);
+    console.log(`   ID: ${savedUser._id}`);
+    console.log(`   Email: ${savedUser.email}`);
+    console.log(`   Database: ${savedUser.constructor.collection.name}\n`);
 
     // Generate token
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: savedUser._id, role: savedUser.role },
       process.env.JWT_SECRET || "default-secret",
       { expiresIn: "7d" },
     );
@@ -53,14 +64,14 @@ router.post("/register", async (req: Request, res: Response) => {
       message: "User registered successfully",
       token,
       user: {
-        id: user._id,
-        email: user.email,
-        fullName: user.fullName,
-        role: user.role,
+        id: savedUser._id,
+        email: savedUser.email,
+        fullName: savedUser.fullName,
+        role: savedUser.role,
       },
     });
   } catch (error) {
-    console.error("Register error:", error);
+    console.error("❌ Register error:", error);
     res.status(500).json({ error: "Failed to register user" });
   }
 });
@@ -70,30 +81,41 @@ router.post("/login", async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
+    console.log(`\n🔓 LOGIN REQUEST: ${email}`);
+
     if (!email || !password) {
       res.status(400).json({ error: "Email and password are required" });
       return;
     }
 
     // Find user
+    console.log(`🔍 Looking up user: ${email}`);
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
+      console.log(`⚠️ User not found: ${email}`);
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
+    console.log(`✅ User found: ${user.email} (ID: ${user._id})`);
+
     // Check if banned
     if (user.isBanned) {
+      console.log(`🚫 User is banned: ${email}`);
       res.status(403).json({ error: "Account is banned" });
       return;
     }
 
     // Verify password
+    console.log(`🔐 Verifying password...`);
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      console.log(`❌ Password mismatch for: ${email}`);
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
+
+    console.log(`✅ Password verified for: ${email}\n`);
 
     // Generate token
     const token = jwt.sign(
@@ -115,7 +137,7 @@ router.post("/login", async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("❌ Login error:", error);
     res.status(500).json({ error: "Failed to login" });
   }
 });

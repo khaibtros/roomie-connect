@@ -8,8 +8,15 @@ const MONGODB_URI =
 
 export const connectDatabase = async (): Promise<void> => {
   try {
+    console.log(`\n🔗 Attempting MongoDB connection...`);
+    console.log(`📍 Database URI: ${MONGODB_URI.split('//')[1]?.split('@')[0]}@.../${MONGODB_URI.split('/').pop()}`);
+    
     await mongoose.connect(MONGODB_URI);
-    console.log("✅ MongoDB connected successfully");
+    
+    const dbName = mongoose.connection.name || 'unknown';
+    console.log(`✅ MongoDB connected successfully`);
+    console.log(`📦 Database: ${dbName}`);
+    console.log(`🔌 Connection state: ${mongoose.connection.readyState}\n`);
   } catch (error) {
     console.error("❌ MongoDB connection error:", error);
     process.exit(1);

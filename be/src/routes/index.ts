@@ -8,6 +8,8 @@ import chatRoutes from "./chat.routes";
 import adminRoutes from "./admin.routes";
 import favoritesRoutes from "./favorites.routes";
 import aiRoutes from "./ai.routes";
+import subscriptionRoutes from "./subscription.routes";
+import contractRoutes from "./contracts.routes";
 
 const router = Router();
 
@@ -30,5 +32,7 @@ router.use("/chat", chatRoutes);
 router.use("/admin", adminRoutes);
 router.use("/favorites", favoritesRoutes);
 router.use("/ai", aiRoutes);
+router.use("/subscription", subscriptionRoutes);
+router.use("/contracts", contractRoutes);
 
 export default router;
