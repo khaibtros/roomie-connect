@@ -362,6 +362,12 @@ class ApiClient {
     return this.request<{ tokens: number; maxTokens: number }>('/ai/tokens');
   }
 
+  async clearAiHistory() {
+    return this.request<{ success: boolean; deleted: number }>('/ai/history', {
+      method: 'DELETE',
+    });
+  }
+
   // Subscription endpoints
   async getSubscriptionPackages() {
     return this.request<{ packages: any[] }>('/subscription/packages');

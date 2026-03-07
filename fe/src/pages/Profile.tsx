@@ -49,9 +49,9 @@ export default function Profile() {
         setSavedCount(Array.isArray(favorites) ? favorites.length : 0);
       }
       
-      // Get viewed rooms from localStorage (unique rooms viewed)
-      const viewedRooms = JSON.parse(localStorage.getItem('viewedRooms') || '[]');
-      setViewedCount(viewedRooms.length);
+      // Get viewed rooms from localStorage (keyed by historyService)
+      const viewedRooms = JSON.parse(localStorage.getItem('room_view_history') || '[]');
+      setViewedCount(Array.isArray(viewedRooms) ? viewedRooms.length : 0);
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {

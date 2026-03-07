@@ -54,6 +54,21 @@ router.get("/history", authMiddleware, async (req: AuthRequest, res: Response): 
 });
 
 // ---------------------------------------------------------------------------
+// DELETE /api/ai/history — Permanently delete all AI chat history for the user
+// ---------------------------------------------------------------------------
+router.delete("/history", authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const result = await AiUsage.deleteMany({ userId });
+    console.log(`[AiHistory] Cleared ${result.deletedCount} records for userId=${userId}`);
+    res.json({ success: true, deleted: result.deletedCount });
+  } catch (error) {
+    console.error("AI clear history error:", error);
+    res.status(500).json({ success: false, error: "Failed to clear chat history" });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/ai/tokens — Get the user's remaining AI token balance
 // ---------------------------------------------------------------------------
 router.get("/tokens", authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {

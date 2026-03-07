@@ -31,6 +31,7 @@ import {
   Zap,
   Users,
   BookOpen,
+  Trash2,
 } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
@@ -108,7 +109,7 @@ const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'bot',
   content:
-    'Xin chào! Tôi là **KnockBot** — trợ lý AI của KnockKnock.\n\nTôi có thể giúp bạn:\n•  **Tìm phòng**: “Tìm phòng dưới 3 triệu ở Hòa Lạc”\n•  **Tìm bạn cùng phòng**: “Tìm bạn phòng nữ khu Tân Xã”\n•  Hỏi đáp chung về tiềm phòng trọ\n\nMọi tin nhắn sẻ sử dụng 1 token.',
+    'Xin chào! Tôi là **KnockBot** — trợ lý AI của KnockKnock.\n\nTôi có thể giúp bạn:\n•  **Tìm phòng**: “Tìm phòng dưới 3 triệu ở Hòa Lạc”\n•  **Tìm bạn cùng phòng**: “Tìm bạn phòng ngủ sớm, không hút thuốc,.. ”\n•  Hỏi đáp chung về tìm phòng trọ\n\nMỗi tin nhắn sẽ sử dụng 1 token.',
   timestamp: new Date(),
 };
 
@@ -123,6 +124,7 @@ export default function TenantAIChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isClearingHistory, setIsClearingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Refs
@@ -283,6 +285,25 @@ export default function TenantAIChat() {
     }
   };
 
+  // Clear chat history
+  const handleClearHistory = async () => {
+    if (!window.confirm('Bạn có chắc muốn xóa toàn bộ lịch sử chat? Hành động này không thể hoàn tác.')) return;
+    setIsClearingHistory(true);
+    try {
+      const { data, error: apiError } = await apiClient.clearAiHistory();
+      if (apiError || !data?.success) {
+        toast.error('Không thể xóa lịch sử. Vui lòng thử lại.');
+        return;
+      }
+      setMessages([WELCOME_MESSAGE]);
+      toast.success('Đã xóa lịch sử chat.');
+    } catch {
+      toast.error('Không thể xóa lịch sử. Vui lòng thử lại.');
+    } finally {
+      setIsClearingHistory(false);
+    }
+  };
+
   // Handle Enter key
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -358,7 +379,7 @@ export default function TenantAIChat() {
             </div>
           </div>
 
-          {/* Token Balance Badge + Recharge Button */}
+          {/* Token Balance Badge + Recharge + Clear History */}
           <div className="flex items-center gap-2">
             <Badge
               variant={aiTokens > 5 ? 'default' : aiTokens > 0 ? 'secondary' : 'destructive'}
@@ -374,6 +395,20 @@ export default function TenantAIChat() {
             >
               <Zap className="h-3.5 w-3.5 mr-1" />
               Nạp xu
+            </Button>
+            <Button
+              onClick={handleClearHistory}
+              disabled={isClearingHistory || isLoading}
+              size="sm"
+              variant="ghost"
+              className="rounded-full px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              title="Xóa lịch sử chat"
+            >
+              {isClearingHistory ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
             </Button>
           </div>
         </motion.div>
