@@ -13,7 +13,11 @@ import contractRoutes from "./contracts.routes";
 
 const router = Router();
 
-// Health check
+// ---------------------------------------------------------------------------
+// Public routes — NO auth required
+// Order matters: these must be mounted BEFORE any auth middleware so they
+// are reachable without a JWT token.
+// ---------------------------------------------------------------------------
 router.get("/health", (req, res) => {
   res.json({
     status: "ok",
@@ -22,17 +26,20 @@ router.get("/health", (req, res) => {
   });
 });
 
-// Mount routes
-router.use("/auth", authRoutes);
-router.use("/rooms", roomsRoutes);
-router.use("/roommates", roommatesRoutes);
+router.use("/auth", authRoutes);  // register / login — public
+router.use("/ai",   aiRoutes);    // /ai/chat is public; /ai/history|tokens carry their own authMiddleware
+
+// ---------------------------------------------------------------------------
+// Protected routes — each route file applies authMiddleware internally
+// ---------------------------------------------------------------------------
+router.use("/rooms",         roomsRoutes);
+router.use("/roommates",     roommatesRoutes);
 router.use("/notifications", notificationsRoutes);
-router.use("/wallet", walletRoutes);
-router.use("/chat", chatRoutes);
-router.use("/admin", adminRoutes);
-router.use("/favorites", favoritesRoutes);
-router.use("/ai", aiRoutes);
-router.use("/subscription", subscriptionRoutes);
-router.use("/contracts", contractRoutes);
+router.use("/wallet",        walletRoutes);
+router.use("/chat",          chatRoutes);
+router.use("/admin",         adminRoutes);
+router.use("/favorites",     favoritesRoutes);
+router.use("/subscription",  subscriptionRoutes);
+router.use("/contracts",     contractRoutes);
 
 export default router;

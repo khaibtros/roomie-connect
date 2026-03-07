@@ -44,7 +44,8 @@ export default function Profile() {
       // Fetch saved rooms count
       const favoritesRes = await apiClient.getFavorites();
       if (favoritesRes.data) {
-        const favorites = favoritesRes.data.favorites || favoritesRes.data.rooms || [];
+        const data = favoritesRes.data as Record<string, unknown>;
+        const favorites = (data.favorites as unknown[]) || (data.rooms as unknown[]) || [];
         setSavedCount(Array.isArray(favorites) ? favorites.length : 0);
       }
       
@@ -64,8 +65,8 @@ export default function Profile() {
     { icon: Bell, label: 'Thông báo', badge: '2', action: () => navigate('/notifications') },
     { icon: Shield, label: 'Quyền riêng tư', action: () => navigate('/privacy') },
     { icon: Lock, label: 'Đổi Mật Khẩu', action: () => navigate('/auth/change-password') },
-    { icon: Star, label: 'Đánh giá ứng dụng', action: () => {} },
-    { icon: HelpCircle, label: 'Trợ giúp & Hỗ trợ', action: () => navigate('/support') },
+    { icon: Star, label: 'Đánh giá ứng dụng', action: () => navigate('/rate-app') },
+    { icon: HelpCircle, label: 'Trợ giúp & Hỗ trợ', action: () => navigate('/faq') },
   ];
 
   const handleLogout = async () => {
@@ -236,7 +237,7 @@ export default function Profile() {
 
         {/* Version */}
         <p className="text-center text-xs text-muted-foreground">
-          KnockKnock v1.0.0 • Made with ❤️ for students
+          KnockKnock v1.0.0 •
         </p>
       </div>
     </Layout>

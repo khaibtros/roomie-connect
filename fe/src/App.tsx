@@ -9,7 +9,13 @@ import Home from "./pages/Home";
 import FindRoom from "./pages/FindRoom";
 import FindRoommateChoice from "./pages/FindRoommateChoice";
 import RoomDetail from "./pages/RoomDetail";
-import SavedRooms from "./pages/SavedRooms";
+import SavedRooms from "./pages/tenant/features/saved-rooms/page";
+import HistoryPage from "./pages/tenant/features/history/page";
+import NotificationPage from "./pages/tenant/features/notification/page";
+import PrivacyPage from "./pages/tenant/features/privacy/page";
+import RatingPage from "./pages/tenant/features/rating/page";
+import FAQPage from "./pages/tenant/features/support/pages/FAQPage";
+import ContactSupportPage from "./pages/tenant/features/support/pages/ContactSupportPage";
 import Quiz from "./pages/Quiz";
 import Matches from "./pages/Matches";
 import Messages from "./pages/Messages";
@@ -224,6 +230,12 @@ const App = () => (
             />
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
 
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/notifications" element={<NotificationPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/rate-app" element={<RatingPage />} />
+            <Route path="/faq" element={<FAQPage />} />
+            <Route path="/support/contact" element={<ContactSupportPage />} />
             <Route path="/quiz" element={<Quiz />} />
             <Route path="/matches" element={<Matches />} />
             <Route path="/messages" element={<Messages />} />

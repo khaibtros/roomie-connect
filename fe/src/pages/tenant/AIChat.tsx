@@ -100,6 +100,15 @@ function getActiveAmenities(room: any): string[] {
     .map(([, label]) => label);
 }
 
+// Defined outside the component so it is not recreated on each render
+const WELCOME_MESSAGE: ChatMessage = {
+  id: 'welcome',
+  role: 'bot',
+  content:
+    'Xin chào! Tôi là **KnockBot** — trợ lý AI tìm phòng trọ.\n\nHãy mô tả phòng bạn cần, ví dụ:\n•  "Tìm phòng dưới 3 triệu ở Hòa Lạc"\n•  "Phòng có máy lạnh"\n•  "Phòng trọ 2 phòng ngủ"\n\nMọi tin nhắn sẽ sử dụng 1 token.',
+  timestamp: new Date(),
+};
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -107,16 +116,8 @@ export default function TenantAIChat() {
   const navigate = useNavigate();
   const { aiTokens, setAiTokens, refreshAiTokens, isAuthenticated, loading: authLoading } = useAuth();
 
-  // Chat state
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      role: 'bot',
-      content:
-        'Xin chào! Tôi là **KnockBot** — trợ lý AI tìm phòng trọ.\n\nHãy mô tả phòng bạn cần, ví dụ:\n•  "Tìm phòng dưới 3 triệu ở Hòa Lạc"\n•  "Phòng có máy lạnh, gần Cầu Giấy"\n•  "Phòng trọ full nội thất quận 1"\n\nMỗi tin nhắn sẽ sử dụng 1 token.',
-      timestamp: new Date(),
-    },
-  ]);
+  // Chat state — prefilled from persisted history on mount
+  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,11 +134,47 @@ export default function TenantAIChat() {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  // Fetch real token balance on mount
+  // Restore chat history from backend on mount
+  const loadHistory = useCallback(async () => {
+    try {
+      const { data, error } = await apiClient.getAiHistory(1, 100);
+      if (error || !data?.history?.length) return;
+
+      // API returns newest-first; reverse so oldest appears at top
+      const sorted = [...data.history].reverse();
+      const historyMessages: ChatMessage[] = [];
+
+      for (const item of sorted) {
+        // Each AiUsage record maps to one user + one bot bubble
+        historyMessages.push({
+          id: `hist-user-${item._id as string}`,
+          role: 'user',
+          content: item.prompt as string,
+          timestamp: new Date(item.createdAt as string),
+        });
+        historyMessages.push({
+          id: `hist-bot-${item._id as string}`,
+          role: 'bot',
+          content: item.response as string,
+          timestamp: new Date(item.createdAt as string),
+          // Restore room cards that were returned with this message
+          results: Array.isArray(item.roomResults) ? item.roomResults : [],
+        });
+      }
+
+      setMessages([WELCOME_MESSAGE, ...historyMessages]);
+    } catch (err) {
+      console.error('Failed to load AI chat history:', err);
+    }
+  }, []);
+
+  // Fetch token balance + restore history when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       refreshAiTokens();
+      loadHistory();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   // Auto-scroll to bottom when messages change
@@ -175,19 +212,13 @@ export default function TenantAIChat() {
     setIsLoading(true);
 
     try {
-      const { data, error: apiError } = await apiClient.sendAiMessage(trimmed);
+      // Backend returns { success: boolean, data: string } | { success: false, error: string }
+      const { data: responseBody, error: networkError } = await apiClient.sendAiMessage(trimmed);
 
-      if (apiError) {
-        // Handle payment-required error specifically
-        if (apiError.includes('payment') || apiError.includes('token')) {
-          setError('Bạn đã hết token AI. Vui lòng nạp thêm.');
-          toast.error('Hết token AI');
-        } else {
-          setError(apiError);
-          toast.error('Lỗi: ' + apiError);
-        }
-
-        // Add error message to chat
+      // Network / fetch-level error (e.g. server unreachable)
+      if (networkError) {
+        setError(networkError);
+        toast.error('Lỗi kết nối: ' + networkError);
         const errMsg: ChatMessage = {
           id: `err-${Date.now()}`,
           role: 'bot',
@@ -198,20 +229,33 @@ export default function TenantAIChat() {
         return;
       }
 
-      if (data) {
-        // Update token balance from server response
-        if (typeof data.tokensRemaining === 'number') {
-          setAiTokens(data.tokensRemaining);
-        }
+      // Application-level error returned by backend
+      if (!responseBody?.success) {
+        const errText = responseBody?.error ?? 'Đã xảy ra lỗi không xác định.';
+        setError(errText);
+        toast.error(errText);
+        const errMsg: ChatMessage = {
+          id: `err-${Date.now()}`,
+          role: 'bot',
+          content: ` ${errText}`,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errMsg]);
+        return;
+      }
 
-        // Add bot reply with room results
+      if (responseBody?.data) {
+        // Sync token display with server-authoritative value
+        if (typeof responseBody.tokensRemaining === 'number') {
+          setAiTokens(responseBody.tokensRemaining);
+        }
         const botMsg: ChatMessage = {
           id: `bot-${Date.now()}`,
           role: 'bot',
-          content: data.reply,
+          content: responseBody.data,
           timestamp: new Date(),
-          results: data.results || [],
-          filters: data.filters || undefined,
+          // Room cards with links rendered by the existing room-card JSX below
+          results: responseBody.rooms ?? [],
         };
         setMessages((prev) => [...prev, botMsg]);
       }

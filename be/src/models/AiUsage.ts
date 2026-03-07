@@ -9,6 +9,8 @@ export interface IAiUsage extends Document {
   prompt: string;
   response: string;
   tokensUsed: number;
+  /** Snapshot of room documents returned for this query (used to restore history UI) */
+  roomResults?: Record<string, unknown>[];
   createdAt: Date;
 }
 
@@ -30,6 +32,11 @@ const aiUsageSchema = new Schema<IAiUsage>(
     tokensUsed: {
       type: Number,
       default: 1,
+    },
+    // Stored as mixed so we can snapshot any room shape without coupling to Room schema
+    roomResults: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: undefined,
     },
   },
   {

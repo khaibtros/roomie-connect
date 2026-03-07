@@ -336,15 +336,11 @@ class ApiClient {
   // AI Chat endpoints
   async sendAiMessage(message: string) {
     return this.request<{
-      reply: string;
-      filters?: {
-        intent: 'search_room' | 'general_question';
-        max_price: number | null;
-        district: string | null;
-        amenities: string[];
-      };
-      results?: any[];
-      tokensRemaining: number;
+      success: boolean;
+      data: string;                          // LLM reply text
+      error?: string;
+      rooms?: Record<string, unknown>[];     // populated on room-search queries
+      tokensRemaining?: number;              // updated balance after deduction
     }>('/ai/chat', {
       method: 'POST',
       body: JSON.stringify({ message }),

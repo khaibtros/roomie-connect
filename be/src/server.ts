@@ -8,14 +8,20 @@ import {
   notFoundMiddleware,
 } from "./middleware/error.middleware";
 
-// Load environment variables
+
+// Load environment variables first so process.env is populated before use
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+// cors() with no arguments allows all origins — safe for local development.
+// Tighten this in production via the FRONTEND_URL environment variable.
+app.use(cors({
+  origin: process.env.FRONTEND_URL || true,
+  credentials: false,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
