@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { historyService } from "@/pages/tenant/features/history/services/history.service";
 import {
   Heart,
   Phone,
@@ -122,8 +123,18 @@ export function RoomCard({ room, onSave, isSaved = false }: RoomCardProps) {
     return `${(price / 1000).toFixed(0)}k`;
   };
 
+  const handleCardClick = () => {
+    historyService.add({
+      id: room.id,
+      title: room.title,
+      address: room.address,
+      price: room.price,
+      thumbnail: room.images[0] ?? "",
+    });
+  };
+
   return (
-    <Link to={`/rooms/${room.id}`}>
+    <Link to={`/rooms/${room.id}`} onClick={handleCardClick}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
