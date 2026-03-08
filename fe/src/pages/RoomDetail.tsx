@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -32,6 +32,7 @@ import { apiClient } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { mapApiRoomToUiRoom } from "@/utils/mappers";
+import type { Room } from "@/types";
 
 const AMENITY_ICONS: Record<string, React.ReactNode> = {
   "Điều hoà": <Zap className="h-4 w-4" />,
@@ -58,21 +59,12 @@ export default function RoomDetail() {
   const [hoverRating, setHoverRating] = useState(0);
   const [ratingComment, setRatingComment] = useState("");
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
-  const [room, setRoom] = useState<any>(null);
+  const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (id) {
-      fetchRoom();
-      checkIfSaved();
-      // Track viewed room in localStorage
-      trackViewedRoom(id);
-    }
-  }, [id]);
-
-  const trackViewedRoom = (roomId: string) => {
+  const trackViewedRoom = useCallback((roomId: string) => {
     try {
-      const viewedRooms = JSON.parse(localStorage.getItem('viewedRooms') || '[]');
+      const viewedRooms = JSON.parse(localStorage.getItem('viewedRooms') || '[]') as string[];
       if (!viewedRooms.includes(roomId)) {
         viewedRooms.push(roomId);
         localStorage.setItem('viewedRooms', JSON.stringify(viewedRooms));
@@ -80,12 +72,13 @@ export default function RoomDetail() {
     } catch (error) {
       console.error('Error tracking viewed room:', error);
     }
-  };
+  }, []);
 
-  const fetchRoom = async () => {
+  const fetchRoom = useCallback(async () => {
+    if (!id) return;
     try {
       setLoading(true);
-      const { data, error } = await apiClient.getRoom(id!);
+      const { data, error } = await apiClient.getRoom(id);
 
       if (error) {
         throw new Error(error);
@@ -97,9 +90,9 @@ export default function RoomDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const checkIfSaved = async () => {
+  const checkIfSaved = useCallback(async () => {
     if (!isAuthenticated || !id) return;
     
     try {
@@ -110,7 +103,15 @@ export default function RoomDetail() {
     } catch (error) {
       console.error("Error checking favorite status:", error);
     }
-  };
+  }, [isAuthenticated, id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchRoom();
+      checkIfSaved();
+      trackViewedRoom(id);
+    }
+  }, [id, fetchRoom, checkIfSaved, trackViewedRoom]);
 
   const handleSaveRoom = async () => {
     // Redirect to login if not authenticated
@@ -373,7 +374,7 @@ export default function RoomDetail() {
                   className="w-full h-full object-cover hover:scale-105 transition-transform"
                 />
               </div>
-              {room.images?.slice(1, 5).map((img: string, idx: number) => (
+              {room.images?.slice(1, 5).map((img, idx) => (
                 <div
                   key={idx}
                   className="hidden md:block aspect-square cursor-pointer"
@@ -418,7 +419,7 @@ export default function RoomDetail() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  {timeAgo(new Date(room.created_at || room.postedAt))}
+                  {timeAgo(new Date(room.postedAt))}
                 </span>
                 <span className="flex items-center gap-1">
                   <Eye className="h-4 w-4" />
