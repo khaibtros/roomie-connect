@@ -3,9 +3,10 @@ import AdminLayout from '@/layouts/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
+import type { ApiUser } from '@/types/api';
 
 export default function AdminUsers() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<ApiUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'landlord' | 'tenant'>('all');
 
@@ -77,7 +78,7 @@ export default function AdminUsers() {
           <div className="flex items-center gap-2">
             <select
               value={filter}
-              onChange={(e) => setFilter(e.target.value as any)}
+              onChange={(e) => setFilter(e.target.value as 'all' | 'landlord' | 'tenant')}
               className="px-3 py-1 rounded border"
             >
               <option value="all">All</option>

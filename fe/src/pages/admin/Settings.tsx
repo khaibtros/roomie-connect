@@ -40,7 +40,7 @@ export default function SystemSettings() {
 
   const [hasChanges, setHasChanges] = useState(false);
 
-  const handleChange = (field: keyof SystemSettings, value: any) => {
+  const handleChange = (field: keyof SystemSettings, value: SystemSettings[keyof SystemSettings]) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
     setHasChanges(true);
   };

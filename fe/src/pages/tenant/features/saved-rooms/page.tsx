@@ -19,12 +19,14 @@ import { apiClient } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { mapApiRoomToUiRoom } from "@/utils/mappers";
+import type { Room } from "@/types";
+import type { ApiFavorite, ApiRoom } from "@/types/api";
 
 export default function SavedRooms() {
   const navigate = useNavigate();
   const { isAuthenticated, role, loading: authLoading } = useAuth();
 
-  const [rooms, setRooms] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [contractRequestingId, setContractRequestingId] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export default function SavedRooms() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isAuthenticated, role]);
+  }, [isAuthenticated, role, navigate]);
 
   const fetchSavedRooms = async () => {
     try {
@@ -63,30 +65,30 @@ export default function SavedRooms() {
       // Debug logging
       console.log("Favorites API response:", data);
 
-      // Handle both possible response structures
-      const favoritesData = data?.favorites || data?.rooms || [];
+      // Handle the response structure: { favorites: ApiFavorite[] }
+      const favoritesData = data?.favorites || [];
       
-      let mappedRooms: any[] = [];
+      let mappedRooms: Room[] = [];
       if (Array.isArray(favoritesData)) {
         mappedRooms = favoritesData
-          .map((item: any) => {
+          .map((item: ApiFavorite) => {
             console.log("Processing favorite item:", item);
             
             // Item might be: 
             // 1. {room: {...room data...}}
             // 2. {...room data directly...}
             // 3. {roomId: {...room data...}}
-            const roomData = item.room || item.roomId || item;
+            const roomData = (item.room || (typeof item.roomId === 'object' ? item.roomId : null)) as ApiRoom | null;
             
             console.log("Room data to map:", roomData);
             
             // Only map if we have valid room data with at least an id
-            if (roomData && (roomData._id || roomData.id)) {
+            if (roomData && roomData._id) {
               return mapApiRoomToUiRoom(roomData);
             }
             return null;
           })
-          .filter((room: any) => room !== null);
+          .filter((room): room is Room => room !== null);
       }
       
       console.log("Mapped rooms:", mappedRooms);
@@ -118,17 +120,15 @@ export default function SavedRooms() {
     }
   };
 
-  const handleCreateContractRequest = async (room: any) => {
+  const handleCreateContractRequest = async (room: Room) => {
     setContractRequestingId(room.id);
     try {
-      // TODO: Implement API call for creating contract request
-      // const { error } = await apiClient.createContractRequest(room.id);
-      // if (error) {
-      //   toast.error("Không thể tạo yêu cầu hợp đồng");
-      //   return;
-      // }
-      toast.success("Đã gửi yêu cầu hợp đồng cho chủ nhà");
-      // Optionally navigate or refresh
+      const { error } = await apiClient.createContractRequest(room.id);
+      if (error) {
+        toast.error(error.includes("already have a pending") ? "Đã có yêu cầu đang chờ phê duyệt cho phòng này" : "Đã gửi yêu cầu hợp đồng thất bại");
+        return;
+      }
+      toast.success("Đã gửi yêu cầu hợp đồng cho chủ nhà!");
     } catch (error) {
       console.error("Error creating contract request:", error);
       toast.error("Không thể tạo yêu cầu hợp đồng");
@@ -250,7 +250,7 @@ export default function SavedRooms() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          {timeAgo(new Date(room.created_at || room.postedAt))}
+                          {timeAgo(new Date(room.postedAt))}
                         </span>
                         <span className="flex items-center gap-1">
                           <Eye className="h-4 w-4" />

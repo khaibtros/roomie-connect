@@ -98,7 +98,7 @@ function formatPrice(price: number): string {
 // ---------------------------------------------------------------------------
 // Helper: get list of active amenities from room document
 // ---------------------------------------------------------------------------
-function getActiveAmenities(room: any): string[] {
+function getActiveAmenities(room: Record<string, unknown>): string[] {
   return Object.entries(AMENITY_LABELS)
     .filter(([key]) => room[key] === true)
     .map(([, label]) => label);
@@ -446,43 +446,51 @@ export default function TenantAIChat() {
                   {/* Room Result Cards */}
                   {msg.results && msg.results.length > 0 && (
                     <div className="mt-3 space-y-2">
-                      {msg.results.map((room: any) => (
+                      {msg.results.map((room) => {
+                        const id = room._id as string;
+                        const title = room.title as string;
+                        const images = room.images as string[] | undefined;
+                        const district = room.district as string | undefined;
+                        const address = room.address as string | undefined;
+                        const price = room.price as number;
+                        const area = room.area as number | undefined;
+                        return (
                         <Link
-                          key={room._id}
-                          to={`/rooms/${room._id}`}
+                          key={id}
+                          to={`/rooms/${id}`}
                           className="block"
                         >
                           <Card className="hover:shadow-md transition-shadow cursor-pointer border-border/60">
                             <CardContent className="p-3">
                               {/* Room image + info */}
                               <div className="flex gap-3">
-                                {room.images?.[0] && (
+                                {images?.[0] && (
                                   <img
-                                    src={room.images[0]}
-                                    alt={room.title}
+                                    src={images[0]}
+                                    alt={title}
                                     className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                                   />
                                 )}
                                 <div className="flex-1 min-w-0">
                                   <h4 className="font-semibold text-sm line-clamp-1">
-                                    {room.title}
+                                    {title}
                                   </h4>
                                   <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                                     <MapPin className="h-3 w-3 flex-shrink-0" />
                                     <span className="line-clamp-1">
-                                      {room.district || room.address}
+                                      {district || address}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-1 mt-1">
                                     <DollarSign className="h-3 w-3 text-primary flex-shrink-0" />
                                     <span className="text-sm font-bold text-primary">
-                                      {formatPrice(room.price)}
+                                      {formatPrice(price)}
                                     </span>
                                   </div>
-                                  {room.area && (
+                                  {area && (
                                     <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                                       <Home className="h-3 w-3 flex-shrink-0" />
-                                      <span>{room.area} m²</span>
+                                      <span>{area} m²</span>
                                     </div>
                                   )}
                                 </div>
@@ -516,7 +524,8 @@ export default function TenantAIChat() {
                             </CardContent>
                           </Card>
                         </Link>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 

@@ -50,12 +50,10 @@ export default function Login() {
   async function waitForRole(timeout = 2000) {
     const start = Date.now();
     // Poll until role is set or timeout
-    // eslint-disable-next-line no-constant-condition
     while (Date.now() - start < timeout) {
       // read current role from context
       // small delay
-      // @ts-ignore - reading via closure
-      if ((window as any).__auth_role_ready) break;
+      if ((window as unknown as Record<string, unknown>).__auth_role_ready) break;
       await new Promise((r) => setTimeout(r, 50));
     }
   }

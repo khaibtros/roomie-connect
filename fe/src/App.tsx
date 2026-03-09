@@ -29,6 +29,7 @@ import ChangePasswordPage from "./pages/auth/ChangePassword";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import TenantAIChat from "./pages/tenant/AIChat";
 import TenantAIPayment from "./pages/tenant/AIPayment";
+import TenantContracts from "./pages/tenant/features/contracts/page";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminRooms from "./pages/admin/Rooms";
 import AdminUsers from "./pages/admin/Users";
@@ -104,6 +105,14 @@ const App = () => (
               element={
                 <ProtectedRoute role="tenant">
                   <FindRoom />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tenant/contracts"
+              element={
+                <ProtectedRoute role="tenant">
+                  <TenantContracts />
                 </ProtectedRoute>
               }
             />

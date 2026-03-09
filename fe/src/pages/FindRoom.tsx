@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { mapApiRoomToUiRoom } from "@/utils/mappers";
+import type { Room } from "@/types";
 
 const DEFAULT_FILTERS: RoomFiltersState = {
   areas: [],
@@ -26,7 +27,7 @@ export default function FindRoom() {
   const [roomFilters, setRoomFilters] =
     useState<RoomFiltersState>(DEFAULT_FILTERS);
   const [savedRooms, setSavedRooms] = useState<string[]>([]);
-  const [rooms, setRooms] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

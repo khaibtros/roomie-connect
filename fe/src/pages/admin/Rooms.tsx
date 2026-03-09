@@ -4,11 +4,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
+import type { ApiRoom } from '@/types/api';
 
 type RoomStatus = 'pending' | 'active' | 'rejected';
 
 export default function AdminRooms() {
-  const [rooms, setRooms] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<ApiRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<RoomStatus | 'all'>('pending');
 

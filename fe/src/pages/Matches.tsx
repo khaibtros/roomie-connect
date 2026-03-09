@@ -146,7 +146,7 @@ export default function Matches() {
   const preferences =
     (location.state?.preferences as QuizPreferences) ||
     DEFAULT_USER_PREFERENCES;
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -161,19 +161,22 @@ export default function Matches() {
       if (error) {
         throw new Error(error);
       }
-      const mappedUsers = (data?.profiles || []).map((profile: any) => ({
-        id: profile.userId?._id || profile._id,
-        name: profile.userId?.fullName || "Người dùng",
-        avatar: profile.userId?.avatarUrl || "https://github.com/shadcn.png",
-        age: 20, // Tuổi mặc định vì backend chưa có
-        university:
-          profile.university || profile.userId?.university || "Đại học FPT",
-        major: "Dữ liệu chưa có",
-        year: 2,
-        bio: profile.bio || "Chưa có giới thiệu",
-        preferences: profile.preferences || {},
-        verified: profile.userId?.isVerified || false,
-      }));
+      const mappedUsers = (data?.profiles || []).map((profile) => {
+        const user = typeof profile.userId === 'object' ? profile.userId : null;
+        return {
+          id: user?._id || profile._id,
+          name: user?.fullName || "Người dùng",
+          avatar: user?.avatarUrl || "https://github.com/shadcn.png",
+          age: 20, // Tuổi mặc định vì backend chưa có
+          university:
+            profile.university || user?.university || "Đại học FPT",
+          major: "Dữ liệu chưa có",
+          year: 2,
+          bio: profile.bio || "Chưa có giới thiệu",
+          preferences: profile.preferences || {},
+          verified: user?.isVerified || false,
+        };
+      });
       setUsers(mappedUsers);
     } catch (error) {
       console.error("Error fetching roommate profiles:", error);

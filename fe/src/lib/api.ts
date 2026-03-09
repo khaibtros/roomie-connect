@@ -1,11 +1,29 @@
 // API client for Node.js backend with MongoDB
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import type {
+  ApiResponse,
+  ApiUser,
+  ApiRoom,
+  ApiWallet,
+  ApiTransaction,
+  ApiNotification,
+  ApiChat,
+  ApiMessage,
+  ApiRoommateProfile,
+  ApiContractRequest,
+  ApiSubscription,
+  ApiSubscriptionPackage,
+  ApiFavorite,
+  ApiAiUsage,
+  AdminStats,
+  Pagination,
+  RoomInput,
+  RoommateProfileInput,
+  UserProfileInput,
+} from '@/types/api';
 
-interface ApiResponse<T = any> {
-  data?: T;
-  error?: string;
-  message?: string;
-}
+export type { ApiResponse } from '@/types/api';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 class ApiClient {
   private token: string | null = null;
@@ -28,7 +46,7 @@ class ApiClient {
     return this.token;
   }
 
-  private async request<T = any>(
+  private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
@@ -68,25 +86,25 @@ class ApiClient {
 
   // Auth endpoints
   async register(email: string, password: string, fullName: string, role?: string) {
-    return this.request<{ token: string; user: any }>('/auth/register', {
+    return this.request<{ token: string; user: ApiUser }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, fullName, role }),
     });
   }
 
   async login(email: string, password: string) {
-    return this.request<{ token: string; user: any }>('/auth/login', {
+    return this.request<{ token: string; user: ApiUser }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
   }
 
   async getProfile() {
-    return this.request<{ user: any }>('/auth/profile');
+    return this.request<{ user: ApiUser }>('/auth/profile');
   }
 
-  async updateProfile(updates: Record<string, any>) {
-    return this.request<{ user: any }>('/auth/profile', {
+  async updateProfile(updates: UserProfileInput) {
+    return this.request<{ user: ApiUser }>('/auth/profile', {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
@@ -131,28 +149,28 @@ class ApiClient {
       });
     }
     const query = queryParams.toString();
-    return this.request<{ rooms: any[]; pagination: any }>(
+    return this.request<{ rooms: ApiRoom[]; pagination: Pagination }>(
       `/rooms${query ? `?${query}` : ''}`
     );
   }
 
   async getRoom(id: string) {
-    return this.request<{ room: any }>(`/rooms/${id}`);
+    return this.request<{ room: ApiRoom }>(`/rooms/${id}`);
   }
 
   async getMyRooms() {
-    return this.request<{ rooms: any[] }>('/rooms/my/listings');
+    return this.request<{ rooms: ApiRoom[] }>('/rooms/my/listings');
   }
 
-  async createRoom(roomData: any) {
-    return this.request<{ room: any }>('/rooms', {
+  async createRoom(roomData: RoomInput) {
+    return this.request<{ room: ApiRoom }>('/rooms', {
       method: 'POST',
       body: JSON.stringify(roomData),
     });
   }
 
-  async updateRoom(id: string, roomData: any) {
-    return this.request<{ room: any }>(`/rooms/${id}`, {
+  async updateRoom(id: string, roomData: Partial<RoomInput>) {
+    return this.request<{ room: ApiRoom }>(`/rooms/${id}`, {
       method: 'PUT',
       body: JSON.stringify(roomData),
     });
@@ -166,42 +184,42 @@ class ApiClient {
 
   // Wallet endpoints
   async getWallet() {
-    return this.request<{ wallet: any }>('/wallet');
+    return this.request<{ wallet: ApiWallet }>('/wallet');
   }
 
   async topUpWallet(amount: number, method: string) {
-    return this.request<{ wallet: any }>('/wallet/topup', {
+    return this.request<{ wallet: ApiWallet }>('/wallet/topup', {
       method: 'POST',
       body: JSON.stringify({ amount, method }),
     });
   }
 
   async getTransactions() {
-    return this.request<{ transactions: any[] }>('/wallet/transactions');
+    return this.request<{ transactions: ApiTransaction[] }>('/wallet/transactions');
   }
 
   // Notifications endpoints
   async getNotifications() {
-    return this.request<{ notifications: any[] }>('/notifications');
+    return this.request<{ notifications: ApiNotification[] }>('/notifications');
   }
 
   async markNotificationRead(id: string) {
-    return this.request(`/notifications/${id}/read`, {
+    return this.request<{ message: string }>(`/notifications/${id}/read`, {
       method: 'PATCH',
     });
   }
 
   // Chat endpoints
   async getChats() {
-    return this.request<{ chats: any[] }>('/chat');
+    return this.request<{ chats: ApiChat[] }>('/chat');
   }
 
   async getChatMessages(chatId: string) {
-    return this.request<{ messages: any[] }>(`/chat/${chatId}/messages`);
+    return this.request<{ messages: ApiMessage[] }>(`/chat/${chatId}/messages`);
   }
 
   async sendMessage(chatId: string, content: string) {
-    return this.request<{ message: any }>(`/chat/${chatId}/messages`, {
+    return this.request<{ message: ApiMessage }>(`/chat/${chatId}/messages`, {
       method: 'POST',
       body: JSON.stringify({ content }),
     });
@@ -209,18 +227,18 @@ class ApiClient {
 
   // Roommate profiles
   async getRoommateProfiles() {
-    return this.request<{ profiles: any[] }>('/roommates');
+    return this.request<{ profiles: ApiRoommateProfile[] }>('/roommates');
   }
 
-  async createRoommateProfile(profileData: any) {
-    return this.request<{ profile: any }>('/roommates', {
+  async createRoommateProfile(profileData: RoommateProfileInput) {
+    return this.request<{ profile: ApiRoommateProfile }>('/roommates', {
       method: 'POST',
       body: JSON.stringify(profileData),
     });
   }
 
-  async updateRoommateProfile(id: string, profileData: any) {
-    return this.request<{ profile: any }>(`/roommates/${id}`, {
+  async updateRoommateProfile(id: string, profileData: Partial<RoommateProfileInput>) {
+    return this.request<{ profile: ApiRoommateProfile }>(`/roommates/${id}`, {
       method: 'PUT',
       body: JSON.stringify(profileData),
     });
@@ -228,24 +246,7 @@ class ApiClient {
 
   // Admin endpoints
   async getAdminStats() {
-    return this.request<{
-      totals: {
-        revenue: number;
-        users: number;
-        newRooms: number;
-        closeRate: number;
-      };
-      revenueMonthly: any[];
-      userGrowth: any[];
-      recentActivity: string[];
-      stats: {
-        landlords: number;
-        tenants: number;
-        activeRooms: number;
-        pendingRooms: number;
-        rejectedRooms: number;
-      };
-    }>('/admin/stats');
+    return this.request<AdminStats>('/admin/stats');
   }
 
   async getAdminRooms(params?: {
@@ -262,19 +263,19 @@ class ApiClient {
       });
     }
     const query = queryParams.toString();
-    return this.request<{ rooms: any[]; pagination: any }>(
+    return this.request<{ rooms: ApiRoom[]; pagination: Pagination }>(
       `/admin/rooms${query ? `?${query}` : ''}`
     );
   }
 
   async approveRoom(id: string) {
-    return this.request<{ message: string; room: any }>(`/admin/rooms/${id}/approve`, {
+    return this.request<{ message: string; room: ApiRoom }>(`/admin/rooms/${id}/approve`, {
       method: 'PUT',
     });
   }
 
   async rejectRoom(id: string, reason: string) {
-    return this.request<{ message: string; room: any }>(`/admin/rooms/${id}/reject`, {
+    return this.request<{ message: string; room: ApiRoom }>(`/admin/rooms/${id}/reject`, {
       method: 'PUT',
       body: JSON.stringify({ reason }),
     });
@@ -295,26 +296,26 @@ class ApiClient {
       });
     }
     const query = queryParams.toString();
-    return this.request<{ users: any[]; pagination: any }>(
+    return this.request<{ users: ApiUser[]; pagination: Pagination }>(
       `/admin/users${query ? `?${query}` : ''}`
     );
   }
 
   async banUser(id: string) {
-    return this.request<{ message: string; user: any }>(`/admin/users/${id}/ban`, {
+    return this.request<{ message: string; user: ApiUser }>(`/admin/users/${id}/ban`, {
       method: 'PUT',
     });
   }
 
   async unbanUser(id: string) {
-    return this.request<{ message: string; user: any }>(`/admin/users/${id}/unban`, {
+    return this.request<{ message: string; user: ApiUser }>(`/admin/users/${id}/unban`, {
       method: 'PUT',
     });
   }
 
   // Favorites endpoints
   async getFavorites() {
-    return this.request<{ favorites: any[] }>('/favorites');
+    return this.request<{ favorites: ApiFavorite[] }>('/favorites');
   }
 
   async checkIsFavorited(roomId: string) {
@@ -322,7 +323,7 @@ class ApiClient {
   }
 
   async addFavorite(roomId: string) {
-    return this.request<{ message: string; favorite: any }>(`/favorites/${roomId}`, {
+    return this.request<{ message: string; favorite: ApiFavorite }>(`/favorites/${roomId}`, {
       method: 'POST',
     });
   }
@@ -353,7 +354,7 @@ class ApiClient {
     if (page) params.append('page', page.toString());
     if (limit) params.append('limit', limit.toString());
     const query = params.toString();
-    return this.request<{ history: any[]; pagination: any }>(
+    return this.request<{ history: ApiAiUsage[]; pagination: Pagination }>(
       `/ai/history${query ? `?${query}` : ''}`
     );
   }
@@ -370,15 +371,15 @@ class ApiClient {
 
   // Subscription endpoints
   async getSubscriptionPackages() {
-    return this.request<{ packages: any[] }>('/subscription/packages');
+    return this.request<{ packages: ApiSubscriptionPackage[] }>('/subscription/packages');
   }
 
   async getCurrentSubscription() {
-    return this.request<{ subscription: any }>('/subscription/current');
+    return this.request<{ subscription: ApiSubscription }>('/subscription/current');
   }
 
   async subscribe(packageType: string) {
-    return this.request<{ subscription: any }>('/subscription/subscribe', {
+    return this.request<{ subscription: ApiSubscription }>('/subscription/subscribe', {
       method: 'POST',
       body: JSON.stringify({ packageType }),
     });
@@ -386,21 +387,21 @@ class ApiClient {
 
   // Contract endpoints
   async getLandlordContracts() {
-    return this.request<{ contracts: any[] }>('/contracts/landlord');
+    return this.request<{ contracts: ApiContractRequest[] }>('/contracts/landlord');
   }
 
   async getContractDetail(id: string) {
-    return this.request<{ contract: any }>(`/contracts/${id}`);
+    return this.request<{ contract: ApiContractRequest }>(`/contracts/${id}`);
   }
 
   async approveContract(id: string) {
-    return this.request<{ contract: any }>(`/contracts/${id}/approve`, {
+    return this.request<{ contract: ApiContractRequest }>(`/contracts/${id}/approve`, {
       method: 'POST',
     });
   }
 
   async rejectContract(id: string, reason: string) {
-    return this.request<{ contract: any }>(`/contracts/${id}/reject`, {
+    return this.request<{ contract: ApiContractRequest }>(`/contracts/${id}/reject`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
     });
@@ -410,6 +411,16 @@ class ApiClient {
     return this.request<{ contractRequest: string }>('/contracts/request', {
       method: 'POST',
       body: JSON.stringify({ roomId }),
+    });
+  }
+
+  async getTenantContracts() {
+    return this.request<{ contracts: ApiContractRequest[] }>('/contracts/tenant');
+  }
+
+  async cancelContractRequest(id: string) {
+    return this.request<{ message: string }>(`/contracts/${id}`, {
+      method: 'DELETE',
     });
   }
 

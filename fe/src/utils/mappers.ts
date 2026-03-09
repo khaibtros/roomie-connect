@@ -1,13 +1,14 @@
 import { Room, RoomOwner, RoomUtilities } from "@/types";
+import type { ApiRoom, ApiUser } from "@/types/api";
 
-export function mapApiRoomToUiRoom(apiRoom: any): Room {
+export function mapApiRoomToUiRoom(apiRoom: ApiRoom): Room {
+  const landlord = typeof apiRoom.landlordId === 'object' ? apiRoom.landlordId : null;
   const owner: RoomOwner = {
-    id: apiRoom.landlordId?._id || apiRoom.landlordId || "",
-    name: apiRoom.landlordId?.fullName || "Unknown",
-    phone: apiRoom.landlordId?.phone || "",
-    avatar: apiRoom.landlordId?.avatarUrl || "",
-    verified: apiRoom.landlordId?.isVerified || false,
-    // Add other fields if necessary
+    id: landlord?._id || (typeof apiRoom.landlordId === 'string' ? apiRoom.landlordId : ""),
+    name: landlord?.fullName || "Unknown",
+    phone: landlord?.phone || "",
+    avatar: landlord?.avatarUrl || "",
+    verified: landlord?.isVerified || false,
   };
 
   const utilities: RoomUtilities = {

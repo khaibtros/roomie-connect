@@ -13,7 +13,8 @@ import {
   Shield,
   Star,
   Lock,
-  Edit2
+  Edit2,
+  FileText
 } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,7 @@ export default function Profile() {
 
   const MENU_ITEMS = [
     { icon: Heart, label: 'Phòng đã lưu', badge: savedCount.toString(), action: () => navigate('/saved-rooms') },
+    { icon: FileText, label: 'Theo dõi hợp đồng', action: () => navigate('/tenant/contracts') },
     { icon: Clock, label: 'Lịch sử xem', badge: viewedCount.toString(), action: () => navigate('/history') },
     { icon: Bell, label: 'Thông báo', badge: '2', action: () => navigate('/notifications') },
     { icon: Shield, label: 'Quyền riêng tư', action: () => navigate('/privacy') },

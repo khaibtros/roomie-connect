@@ -1,11 +1,13 @@
 // src/contexts/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { apiClient } from '@/lib/api';
+import type { ApiUser } from '@/types/api';
 
 export type UserRole = 'admin' | 'landlord' | 'tenant';
 
 interface User {
-  id: string;
+  _id?: string;
+  id?: string;
   email: string;
   fullName?: string;
   avatarUrl?: string;
@@ -171,8 +173,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { error: null };
-    } catch (err: any) {
-      return { error: err };
+    } catch (err) {
+      return { error: err instanceof Error ? err : new Error(String(err)) };
     }
   };
 
@@ -211,8 +213,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { error: null };
-    } catch (err: any) {
-      return { error: err };
+    } catch (err) {
+      return { error: err instanceof Error ? err : new Error(String(err)) };
     }
   };
 
@@ -251,8 +253,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Password changed successfully
       return { error: null };
-    } catch (err: any) {
-      return { error: err };
+    } catch (err) {
+      return { error: err instanceof Error ? err : new Error(String(err)) };
     }
   };
 

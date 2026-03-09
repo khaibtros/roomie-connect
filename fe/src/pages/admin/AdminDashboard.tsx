@@ -5,10 +5,11 @@ import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, Users, Home, DollarSign } from 'lucide-react';
+import type { AdminStats, ApiRoom } from '@/types/api';
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<any>(null);
-  const [rooms, setRooms] = useState<any[]>([]);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [rooms, setRooms] = useState<ApiRoom[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

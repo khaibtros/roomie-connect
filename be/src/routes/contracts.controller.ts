@@ -245,3 +245,76 @@ export const createContractRequest = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to create contract request" });
   }
 };
+
+// GET /api/contracts/tenant - Get all contract requests for tenant
+export const getTenantContracts = async (req: Request, res: Response) => {
+  try {
+    const tenantId = (req as any).userId;
+
+    if (!tenantId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const contracts = await ContractRequest.find({ tenantId }).sort({
+      createdAt: -1,
+    });
+
+    res.json({
+      contracts: contracts.map((c) => ({
+        id: c._id,
+        roomId: c.roomId,
+        roomTitle: c.roomInfo.title,
+        roomAddress: c.roomInfo.address,
+        roomDistrict: c.roomInfo.district,
+        roomPrice: c.roomInfo.price,
+        roomDeposit: c.roomInfo.deposit,
+        status: c.status,
+        rejectionReason: c.rejectionReason,
+        requestDate: c.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error("❌ Get tenant contracts error:", error);
+    res.status(500).json({ error: "Failed to get contracts" });
+  }
+};
+
+// DELETE /api/contracts/:id - Cancel contract request (Tenant side)
+export const cancelContractRequest = async (req: Request, res: Response) => {
+  try {
+    const tenantId = (req as any).userId;
+    const { id } = req.params;
+
+    if (!tenantId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const contract = await ContractRequest.findById(id);
+
+    if (!contract) {
+      res.status(404).json({ error: "Contract not found" });
+      return;
+    }
+
+    // Only the tenant who created it can cancel
+    if (contract.tenantId.toString() !== tenantId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    // Only pending contracts can be cancelled
+    if (contract.status !== "pending") {
+      res.status(400).json({ error: "Only pending contracts can be cancelled" });
+      return;
+    }
+
+    await ContractRequest.findByIdAndDelete(id);
+
+    res.json({ message: "Contract request cancelled" });
+  } catch (error) {
+    console.error("❌ Cancel contract request error:", error);
+    res.status(500).json({ error: "Failed to cancel contract request" });
+  }
+};
