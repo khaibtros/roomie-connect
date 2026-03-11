@@ -63,7 +63,10 @@ export default function Profile() {
         if (notifRes.data) {
           const data = notifRes.data as Record<string, unknown>;
           const notifications = (data.notifications as unknown[]) || (Array.isArray(notifRes.data) ? notifRes.data as unknown[] : []);
-          const unread = Array.isArray(notifications) ? notifications.filter((n: any) => !n.isRead && !n.read).length : 0;
+          const unread = Array.isArray(notifications)
+            ? notifications.filter((n): n is Record<string, unknown> => typeof n === 'object' && n !== null)
+              .filter((n) => !n['isRead'] && !n['read']).length
+            : 0;
           setNotificationCount(unread);
         }
       } catch {
