@@ -379,7 +379,7 @@ class ApiClient {
   }
 
   async subscribe(packageType: string) {
-    return this.request<{ subscription: ApiSubscription }>('/subscription/subscribe', {
+    return this.request<{ subscription: ApiSubscription; checkoutUrl?: string }>('/subscription/subscribe', {
       method: 'POST',
       body: JSON.stringify({ packageType }),
     });

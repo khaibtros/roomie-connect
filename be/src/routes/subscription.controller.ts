@@ -1,6 +1,13 @@
 import { Request, Response } from "express";
 import { Subscription, SubscriptionPackage } from "../models";
 import { Types } from "mongoose";
+import { PayOS } from "@payos/node";
+
+const payos = new PayOS({
+  clientId: process.env.PAYOS_CLIENT_ID || "CLIENT_ID",
+  apiKey: process.env.PAYOS_API_KEY || "API_KEY",
+  checksumKey: process.env.PAYOS_CHECKSUM_KEY || "CHECKSUM_KEY"
+});
 
 // Subscription package prices (Maintenance fees)
 const PACKAGE_PRICES: Record<SubscriptionPackage, { maintenance: number; commission: number }> = {
@@ -96,32 +103,50 @@ export const subscribe = async (req: Request, res: Response) => {
     console.log(`💳 Processing subscription for landlord: ${landlordId}, Package: ${packageType}`);
 
     const packageInfo = PACKAGE_PRICES[packageType as SubscriptionPackage];
+    const orderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000));
     const startDate = new Date();
     const endDate = calculateEndDate(startDate, packageType as SubscriptionPackage);
-
-    // In real app, process payment here
-    // For now, directly create subscription record
 
     const subscription = new Subscription({
       landlordId: new Types.ObjectId(landlordId),
       packageType,
       startDate,
       endDate,
-      status: "active",
+      status: "pending",
       maintenanceFee: packageInfo.maintenance,
       commissionPerContract: packageInfo.commission,
-      paymentId: `PAY_${Date.now()}`, // Mock payment ID
+      orderCode,
     });
 
     await subscription.save();
 
+    // Generate PayOS link
+    const cancelUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/landlord/subscription?status=cancel`;
+    const returnUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/landlord/subscription?status=success`;
+    
+    let checkoutUrl = "";
+    try {
+      const paymentLinkResponse = await payos.paymentRequests.create({
+        orderCode,
+        amount: packageInfo.maintenance,
+        description: `Goi ${packageType}`.substring(0, 25),
+        returnUrl,
+        cancelUrl,
+      });
+      checkoutUrl = paymentLinkResponse.checkoutUrl;
+    } catch (payosError) {
+      console.error("PayOS create link error:", payosError);
+      res.status(500).json({ error: "Failed to generate payment link" });
+      return;
+    }
+
     console.log(`✅ Subscription created: ${subscription._id}`);
     console.log(`   Package: ${packageType}`);
     console.log(`   Maintenance: ${packageInfo.maintenance}`);
-    console.log(`   End date: ${endDate}`);
+    console.log(`   Checkout URL generated`);
 
     res.status(201).json({
-      message: "Subscription created successfully",
+      message: "Subscription pending, please checkout",
       subscription: {
         id: subscription._id,
         packageType: subscription.packageType,
@@ -131,10 +156,34 @@ export const subscribe = async (req: Request, res: Response) => {
         commissionPerContract: subscription.commissionPerContract,
         status: subscription.status,
       },
+      checkoutUrl,
     });
   } catch (error) {
     console.error("❌ Subscribe error:", error);
     res.status(500).json({ error: "Failed to create subscription" });
+  }
+};
+
+// POST /api/subscription/payos-webhook - Handle PayOS webhook
+export const handlePayOSWebhook = async (req: Request, res: Response) => {
+  try {
+    const webhookData = await payos.webhooks.verify(req.body);
+    
+    if (webhookData.code === "00") {
+      const subscription = await Subscription.findOne({ orderCode: webhookData.orderCode });
+      if (subscription && subscription.status === "pending") {
+        subscription.status = "active";
+        subscription.paymentId = webhookData.reference || String(webhookData.orderCode);
+        subscription.startDate = new Date();
+        subscription.endDate = calculateEndDate(subscription.startDate, subscription.packageType as SubscriptionPackage);
+        await subscription.save();
+        console.log(`✅ Webhook: Subscription ${subscription._id} activated.`);
+      }
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error("PayOS webhook error:", error);
+    res.status(400).json({ error: "Invalid webhook payload" });
   }
 };
 

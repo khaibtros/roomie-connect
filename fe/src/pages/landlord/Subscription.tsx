@@ -72,6 +72,17 @@ export default function LandlordSubscription() {
     if (user) {
       fetchData();
     }
+
+    // Handle PayOS return redirect params
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("status");
+    if (status === "success") {
+      toast.success("Thanh toán thành công! Giao dịch đang được xử lý.");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (status === "cancel") {
+      toast.error("Bạn đã hủy thanh toán.");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, [user]);
 
   const fetchData = async () => {
@@ -104,6 +115,11 @@ export default function LandlordSubscription() {
 
       if (error) {
         toast.error("Đăng ký thất bại: " + error);
+        return;
+      }
+
+      if (data?.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
         return;
       }
 
