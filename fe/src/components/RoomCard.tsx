@@ -27,7 +27,7 @@ interface RoomCardProps {
 
 export function RoomCard({ room, onSave, isSaved = false }: RoomCardProps) {
   const navigate = useNavigate();
-  const { isAuthenticated, role } = useAuth();
+  const { isAuthenticated, role, user } = useAuth();
   const [currentImage, setCurrentImage] = useState(0);
   const [saved, setSaved] = useState(isSaved);
   const [isLoading, setIsLoading] = useState(false);
@@ -124,6 +124,7 @@ export function RoomCard({ room, onSave, isSaved = false }: RoomCardProps) {
   };
 
   const handleCardClick = () => {
+    historyService.setUserId(user?.id || user?._id || null);
     historyService.add({
       id: room.id,
       title: room.title,

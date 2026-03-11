@@ -9,7 +9,9 @@ import adminRoutes from "./admin.routes";
 import favoritesRoutes from "./favorites.routes";
 import aiRoutes from "./ai.routes";
 import subscriptionRoutes from "./subscription.routes";
-import contractRoutes from "./contracts.routes";
+import landlordViewingRoutes from "./landlord-viewing.routes";
+import tenantViewingRoutes from "./tenant-viewing.routes";
+import adminViewingRoutes from "./admin-viewing.routes";
 
 const router = Router();
 
@@ -38,8 +40,10 @@ router.use("/notifications", notificationsRoutes);
 router.use("/wallet",        walletRoutes);
 router.use("/chat",          chatRoutes);
 router.use("/admin",         adminRoutes);
+router.use("/admin",         adminViewingRoutes);
 router.use("/favorites",     favoritesRoutes);
 router.use("/subscription",  subscriptionRoutes);
-router.use("/contracts",     contractRoutes);
+router.use("/landlord/viewings", landlordViewingRoutes);
+router.use("/viewings",      tenantViewingRoutes);
 
 export default router;

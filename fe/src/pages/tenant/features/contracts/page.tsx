@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  FileText,
   MapPin,
   Clock,
   ArrowRight,
@@ -11,7 +10,11 @@ import {
   CheckCircle,
   HourglassIcon,
   Trash2,
-  AlertCircle,
+  CalendarClock,
+  CreditCard,
+  User,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -19,8 +22,9 @@ import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import type { ApiViewingRequest, ViewingStatus, DecisionStatus } from "@/types/api";
 
-interface ContractItem {
+interface ViewingItem {
   id: string;
   roomId: string;
   roomTitle: string;
@@ -28,51 +32,78 @@ interface ContractItem {
   roomDistrict: string;
   roomPrice: number;
   roomDeposit?: number;
-  status: "pending" | "approved" | "rejected";
-  rejectionReason?: string;
-  requestDate: string;
+  roomImage?: string | null;
+  roomArea: number;
+  roomCapacity: number;
+  scheduledTime: string;
+  status: ViewingStatus;
+  tenantDecision?: DecisionStatus | null;
+  landlordContact?: {
+    fullName: string;
+    dateOfBirth?: string;
+    zalo?: string;
+    bio?: string;
+  };
+  createdAt: string;
 }
 
-function mapApiContractToItem(c: import("@/types/api").ApiContractRequest): ContractItem {
+function mapApiViewingToItem(v: ApiViewingRequest): ViewingItem {
   return {
-    id: c._id,
-    roomId: c.roomInfo?.roomId || c.roomId,
-    roomTitle: c.roomInfo?.title || "",
-    roomAddress: c.roomInfo?.address || "",
-    roomDistrict: c.roomInfo?.district || "",
-    roomPrice: c.roomInfo?.price || 0,
-    roomDeposit: c.roomInfo?.deposit,
-    status: c.status,
-    rejectionReason: c.rejectionReason,
-    requestDate: c.createdAt,
+    id: v._id,
+    roomId: v.roomInfo?.roomId || v.roomId,
+    roomTitle: v.roomInfo?.title || "",
+    roomAddress: v.roomInfo?.address || "",
+    roomDistrict: v.roomInfo?.district || "",
+    roomPrice: v.roomInfo?.price || 0,
+    roomDeposit: v.roomInfo?.deposit,
+    roomImage: v.roomImage || null,
+    roomArea: v.roomArea || 0,
+    roomCapacity: v.roomCapacity || 1,
+    scheduledTime: v.scheduledTime,
+    status: v.status,
+    tenantDecision: v.tenantDecision ?? null,
+    landlordContact: v.landlordContact,
+    createdAt: v.createdAt,
   };
 }
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<ViewingStatus, { label: string; color: string; icon: typeof HourglassIcon }> = {
   pending: {
     label: "Đang chờ phê duyệt",
     color: "bg-white/10 text-white border border-white/30",
     icon: HourglassIcon,
   },
-  approved: {
-    label: "Đã phê duyệt",
+  awaiting_payment: {
+    label: "Chờ thanh toán",
+    color: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40",
+    icon: CreditCard,
+  },
+  confirmed: {
+    label: "Xác nhận đặt lịch thành công",
     color: "bg-green-500/20 text-green-400 border border-green-500/40",
     icon: CheckCircle,
   },
-  rejected: {
-    label: "Không phê duyệt",
+  completed: {
+    label: "Hoàn thành",
+    color: "bg-blue-500/20 text-blue-400 border border-blue-500/40",
+    icon: CheckCircle,
+  },
+  failed: {
+    label: "Thất bại",
     color: "bg-red-500/20 text-red-400 border border-red-500/40",
     icon: XCircle,
   },
 };
 
-export default function TenantContracts() {
+export default function TenantViewings() {
   const navigate = useNavigate();
   const { isAuthenticated, role, loading: authLoading } = useAuth();
 
-  const [contracts, setContracts] = useState<ContractItem[]>([]);
+  const [viewings, setViewings] = useState<ViewingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [decisionLoadingId, setDecisionLoadingId] = useState<string | null>(null);
+  const [decidedIds, setDecidedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -84,39 +115,59 @@ export default function TenantContracts() {
       navigate("/");
       return;
     }
-    fetchContracts();
+    fetchViewings();
   }, [isAuthenticated, role, navigate]);
 
-  const fetchContracts = async () => {
+  const fetchViewings = async () => {
     try {
       setLoading(true);
-      const { data, error } = await apiClient.getTenantContracts();
+      const { data, error } = await apiClient.getMyViewings();
       if (error) throw new Error(error);
-      setContracts((data?.contracts || []).map(mapApiContractToItem));
+      setViewings((data?.viewings || []).map(mapApiViewingToItem));
     } catch (err) {
-      console.error("Error fetching contracts:", err);
-      toast.error("Không thể tải danh sách hợp đồng");
-      setContracts([]);
+      console.error("Error fetching viewings:", err);
+      toast.error("Không thể tải danh sách lịch xem phòng");
+      setViewings([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancel = async (contractId: string) => {
-    setCancellingId(contractId);
+  const handleCancel = async (viewingId: string) => {
+    setCancellingId(viewingId);
     try {
-      const { error } = await apiClient.cancelContractRequest(contractId);
+      const { error } = await apiClient.cancelViewing(viewingId);
       if (error) {
-        toast.error("Không thể hủy yêu cầu hợp đồng");
+        toast.error("Không thể hủy yêu cầu");
         return;
       }
-      setContracts((prev) => prev.filter((c) => c.id !== contractId));
-      toast.success("Đã hủy yêu cầu hợp đồng");
+      setViewings((prev) => prev.filter((v) => v.id !== viewingId));
+      toast.success("Đã hủy yêu cầu xem phòng");
     } catch (err) {
-      console.error("Error cancelling contract:", err);
-      toast.error("Không thể hủy yêu cầu hợp đồng");
+      console.error("Error cancelling viewing:", err);
+      toast.error("Không thể hủy yêu cầu");
     } finally {
       setCancellingId(null);
+    }
+  };
+
+  const handleDecision = async (viewingId: string, decision: DecisionStatus) => {
+    setDecisionLoadingId(viewingId);
+    try {
+      const { error } = await apiClient.submitTenantDecision(viewingId, { decision });
+      if (error) {
+        toast.error("Không thể gửi quyết định");
+        return;
+      }
+      toast.success(
+        decision === "confirmed" ? "Đã chốt thành công!" : "Đã từ chối",
+      );
+      setDecidedIds((prev) => new Set(prev).add(viewingId));
+    } catch (err) {
+      console.error("Error submitting decision:", err);
+      toast.error("Không thể gửi quyết định");
+    } finally {
+      setDecisionLoadingId(null);
     }
   };
 
@@ -132,6 +183,17 @@ export default function TenantContracts() {
     return `${days} ngày trước`;
   };
 
+  const formatScheduledTime = (dateStr: string) => {
+    return new Date(dateStr).toLocaleString("vi-VN", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   if (authLoading || loading) {
     return (
       <Layout>
@@ -142,9 +204,9 @@ export default function TenantContracts() {
     );
   }
 
-  const pending = contracts.filter((c) => c.status === "pending");
-  const approved = contracts.filter((c) => c.status === "approved");
-  const rejected = contracts.filter((c) => c.status === "rejected");
+  const pending = viewings.filter((v) => v.status === "pending");
+  const confirmed = viewings.filter((v) => v.status === "confirmed");
+  const completed = viewings.filter((v) => v.status === "completed");
 
   return (
     <Layout>
@@ -152,28 +214,28 @@ export default function TenantContracts() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-2">
-            <FileText className="h-6 w-6 text-primary" />
-            <h1 className="text-3xl font-bold">Theo dõi hợp đồng</h1>
+            <CalendarClock className="h-6 w-6 text-primary" />
+            <h1 className="text-3xl font-bold">Lịch xem phòng</h1>
           </div>
           <p className="text-muted-foreground">
-            Bạn có {contracts.length} yêu cầu hợp đồng •{" "}
+            Bạn có {viewings.length} lịch xem phòng •{" "}
             <span className="text-yellow-400">{pending.length} đang chờ</span> •{" "}
-            <span className="text-green-400">{approved.length} đã duyệt</span> •{" "}
-            <span className="text-red-400">{rejected.length} từ chối</span>
+            <span className="text-green-400">{confirmed.length} đã xác nhận</span> •{" "}
+            <span className="text-blue-400">{completed.length} hoàn thành</span>
           </p>
         </div>
 
         {/* Empty state */}
-        {contracts.length === 0 ? (
+        {viewings.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="glass-card p-12 rounded-2xl text-center"
           >
-            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-            <h3 className="text-xl font-semibold mb-2">Chưa có yêu cầu hợp đồng</h3>
+            <CalendarClock className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <h3 className="text-xl font-semibold mb-2">Chưa có lịch xem phòng</h3>
             <p className="text-muted-foreground mb-6">
-              Hãy tìm phòng ưng ý và gửi yêu cầu hợp đồng cho chủ nhà
+              Hãy tìm phòng ưng ý và đặt lịch xem phòng
             </p>
             <Button onClick={() => navigate("/saved-rooms")} className="rounded-full">
               <ArrowRight className="h-4 w-4 mr-2" />
@@ -182,119 +244,222 @@ export default function TenantContracts() {
           </motion.div>
         ) : (
           <div className="space-y-4">
-            {contracts.map((contract, index) => {
-              const cfg = STATUS_CONFIG[contract.status];
+            {viewings.map((viewing, index) => {
+              const cfg = STATUS_CONFIG[viewing.status];
               const StatusIcon = cfg.icon;
               return (
                 <motion.div
-                  key={contract.id}
+                  key={viewing.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.07 }}
                   className="glass-card rounded-2xl overflow-hidden hover:shadow-lg transition-shadow"
                 >
-                  <div className="p-5 space-y-4">
-                    {/* Top row: title + status badge */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-lg line-clamp-1">
-                          {contract.roomTitle}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3.5 w-3.5" />
-                            {contract.roomAddress}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
-                            {timeAgo(contract.requestDate)}
-                          </span>
-                        </div>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4">
+                    {/* Image */}
+                    <div className="md:col-span-1">
+                      <div className="aspect-square rounded-xl overflow-hidden bg-muted">
+                        {viewing.roomImage ? (
+                          <img
+                            src={viewing.roomImage}
+                            alt={viewing.roomTitle}
+                            className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                            onClick={() => navigate(`/rooms/${viewing.roomId}`)}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-muted">
+                            <span className="text-muted-foreground text-sm">Chưa có ảnh</span>
+                          </div>
+                        )}
                       </div>
-                      <Badge
-                        className={`flex items-center gap-1.5 text-xs font-medium shrink-0 ${cfg.color}`}
-                      >
-                        <StatusIcon className="h-3.5 w-3.5" />
-                        {cfg.label}
-                      </Badge>
                     </div>
 
-                    {/* Price row */}
-                    <div className="flex items-center gap-6 text-sm">
+                    {/* Content */}
+                    <div className="md:col-span-2 space-y-3">
+                      {/* Title */}
                       <div>
-                        <span className="text-muted-foreground">Giá thuê: </span>
-                        <span className="font-bold text-primary text-base">
-                          {formatPrice(contract.roomPrice)}
-                          <span className="text-xs font-normal text-muted-foreground">
+                        <h3 className="font-semibold text-lg line-clamp-2">
+                          {viewing.roomTitle}
+                        </h3>
+                        <p className="text-2xl font-bold text-primary mt-1">
+                          {formatPrice(viewing.roomPrice)}
+                          <span className="text-sm font-normal text-muted-foreground">
                             /tháng
                           </span>
-                        </span>
+                        </p>
                       </div>
-                      {contract.roomDeposit && (
-                        <div>
-                          <span className="text-muted-foreground">Đặt cọc: </span>
-                          <span className="font-semibold">
-                            {formatPrice(contract.roomDeposit)}
+
+                      {/* Info */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-4 w-4" />
+                            {viewing.roomAddress}
                           </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            {timeAgo(viewing.createdAt)}
+                          </span>
+                        </div>
+
+                        {/* Scheduled Time */}
+                        <div className="flex items-center gap-2 text-sm">
+                          <CalendarClock className="h-4 w-4 text-primary" />
+                          <span className="font-medium">
+                            Lịch hẹn: {formatScheduledTime(viewing.scheduledTime)}
+                          </span>
+                        </div>
+
+                        {/* Quick Info */}
+                        <div className="flex gap-2 text-sm">
+                          <span className="px-2 py-1 bg-muted rounded-md">
+                            {viewing.roomArea}m²
+                          </span>
+                          <span className="px-2 py-1 bg-muted rounded-md">
+                            {viewing.roomCapacity} người
+                          </span>
+                        </div>
+
+                        {/* Status badge */}
+                        <Badge
+                          className={`inline-flex items-center gap-1.5 text-xs font-medium ${cfg.color}`}
+                        >
+                          <StatusIcon className="h-3.5 w-3.5" />
+                          {cfg.label}
+                        </Badge>
+                      </div>
+
+                      {/* Confirmed - show landlord contact */}
+                      {viewing.status === "confirmed" && viewing.landlordContact && (
+                        <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-400 shrink-0" />
+                            <p className="text-sm font-medium text-green-300">
+                              Xác nhận đặt lịch thành công
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="flex items-center gap-1.5">
+                              <User className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span>{viewing.landlordContact.fullName}</span>
+                            </div>
+                            {viewing.landlordContact.dateOfBirth && (
+                              <div>
+                                <span className="text-muted-foreground">Ngày sinh: </span>
+                                {viewing.landlordContact.dateOfBirth}
+                              </div>
+                            )}
+                            {viewing.landlordContact.zalo && (
+                              <div>
+                                <span className="text-muted-foreground">Zalo: </span>
+                                {viewing.landlordContact.zalo}
+                              </div>
+                            )}
+                            {viewing.landlordContact.bio && (
+                              <div className="col-span-2">
+                                <span className="text-muted-foreground">Giới thiệu: </span>
+                                {viewing.landlordContact.bio}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Failed message */}
+                      {viewing.status === "failed" && (
+                        <div className="flex items-center gap-2 p-3 bg-red-500/10 rounded-lg border border-red-500/20">
+                          <XCircle className="h-4 w-4 text-red-400 shrink-0" />
+                          <p className="text-sm text-red-300">
+                            Yêu cầu xem phòng đã thất bại
+                          </p>
                         </div>
                       )}
                     </div>
 
-                    {/* Rejection reason */}
-                    {contract.status === "rejected" && contract.rejectionReason && (
-                      <div className="flex items-start gap-2 p-3 bg-red-500/10 rounded-lg border border-red-500/20">
-                        <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-xs font-medium text-red-400 mb-0.5">
-                            Lý do từ chối
-                          </p>
-                          <p className="text-sm text-red-300">{contract.rejectionReason}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Approved message */}
-                    {contract.status === "approved" && (
-                      <div className="flex items-center gap-2 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-                        <CheckCircle className="h-4 w-4 text-green-400 shrink-0" />
-                        <p className="text-sm text-green-300">
-                          Chủ nhà đã chấp thuận yêu cầu. Hãy liên hệ để hoàn tất thủ tục.
-                        </p>
-                      </div>
-                    )}
-
                     {/* Actions */}
-                    <div className="flex items-center gap-2 pt-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="rounded-lg"
-                        onClick={() => navigate(`/rooms/${contract.roomId}`)}
-                      >
-                        <ArrowRight className="h-4 w-4 mr-1.5" />
-                        Xem phòng
-                      </Button>
-
-                      {contract.status === "pending" && (
+                    <div className="md:col-span-1 flex flex-col gap-2 justify-between">
+                      <div className="space-y-2">
                         <Button
+                          onClick={() => navigate(`/rooms/${viewing.roomId}`)}
+                          className="w-full rounded-lg"
                           size="sm"
-                          variant="ghost"
-                          disabled={cancellingId === contract.id}
-                          onClick={() => handleCancel(contract.id)}
-                          className="rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
-                          {cancellingId === contract.id ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                              Đang hủy...
-                            </>
-                          ) : (
-                            <>
-                              <Trash2 className="h-4 w-4 mr-1.5" />
-                              Hủy yêu cầu
-                            </>
-                          )}
+                          <ArrowRight className="h-4 w-4 mr-2" />
+                          Xem chi tiết
                         </Button>
+
+                        {/* Decision buttons for confirmed viewings */}
+                        {viewing.status === "confirmed" && (
+                          (decidedIds.has(viewing.id) || viewing.tenantDecision != null) ? (
+                            <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20 text-center">
+                              <CheckCircle className="h-5 w-5 text-green-500 mx-auto mb-1" />
+                              <p className="text-sm font-medium text-green-600">
+                                Cảm ơn bạn đã tin dùng KnockKnock
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2 pt-2">
+                              <p className="text-xs text-muted-foreground font-medium text-center">
+                                Bạn có muốn chốt phòng này?
+                              </p>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  className="flex-1 bg-green-600 hover:bg-green-700 rounded-lg"
+                                  disabled={decisionLoadingId === viewing.id}
+                                  onClick={() => handleDecision(viewing.id, "confirmed")}
+                                >
+                                  {decisionLoadingId === viewing.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <ThumbsUp className="h-4 w-4 mr-1" />
+                                      Chốt
+                                    </>
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1 border-red-400 text-red-500 hover:bg-red-50 rounded-lg"
+                                  disabled={decisionLoadingId === viewing.id}
+                                  onClick={() => handleDecision(viewing.id, "rejected")}
+                                >
+                                  {decisionLoadingId === viewing.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <ThumbsDown className="h-4 w-4 mr-1" />
+                                      Không chốt
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+
+                      {viewing.status === "pending" && (
+                        <div className="flex justify-end pt-2">
+                          <button
+                            disabled={cancellingId === viewing.id}
+                            onClick={() => handleCancel(viewing.id)}
+                            className="flex items-center gap-1.5 text-sm text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
+                          >
+                            {cancellingId === viewing.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Đang hủy...
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="h-4 w-4" />
+                                Hủy yêu cầu
+                              </>
+                            )}
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>

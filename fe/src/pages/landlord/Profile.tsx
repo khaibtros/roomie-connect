@@ -54,8 +54,8 @@ export default function LandlordProfile() {
           email: data.user.email || "",
           phone: data.user.phone || "",
           zalo: data.user.workplace || "",
-          bank_name: data.user.bank_name || "",
-          bank_account: data.user.bank_account || "",
+          bank_name: data.user.bankName || "",
+          bank_account: data.user.bankAccount || "",
           avatar_url: data.user.avatarUrl || "",
         });
       } else {
@@ -84,8 +84,8 @@ export default function LandlordProfile() {
         fullName: profile.full_name,
         phone: profile.phone,
         workplace: profile.zalo,
-        bank_name: profile.bank_name,
-        bank_account: profile.bank_account,
+        bankName: profile.bank_name,
+        bankAccount: profile.bank_account,
         avatarUrl: profile.avatar_url,
       });
 

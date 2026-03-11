@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
 import { User } from "../models";
+import { Notification } from "../models/Notification";
 import { authMiddleware, AuthRequest } from "../middleware/auth.middleware";
 
 const router = Router();
@@ -89,6 +90,14 @@ router.post("/register", async (req: Request, res: Response) => {
     console.log(`   ID: ${savedUser._id}`);
     console.log(`   Email: ${savedUser.email}`);
     console.log(`   Database: ${(savedUser.constructor as any).collection.name}\n`);
+
+    // Create welcome notification
+    await Notification.create({
+      userId: savedUser._id,
+      title: "Chào mừng đến Roomie Connect!",
+      message: "Cảm ơn bạn đã đăng ký. Hãy hoàn thành quiz để tìm bạn ở phù hợp nhất!",
+      type: "ROOM_UPDATE",
+    });
 
     // Generate token
     const token = jwt.sign(

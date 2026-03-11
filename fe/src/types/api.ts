@@ -215,16 +215,26 @@ export interface ApiWallet {
 }
 
 // ---------------------------------------------------------------------------
-// Contract Request
+// Viewing Request
 // ---------------------------------------------------------------------------
-export type ContractRequestStatus = 'pending' | 'approved' | 'rejected';
+export type ViewingStatus =
+  | 'pending'
+  | 'awaiting_payment'
+  | 'confirmed'
+  | 'completed'
+  | 'failed';
 
-export interface ApiTenantInfo {
-  tenantId: string;
-  email: string;
+export type DecisionStatus = 'confirmed' | 'rejected';
+
+export interface ViewingDecisionPayload {
+  decision: DecisionStatus;
+}
+
+export interface ApiLandlordContact {
   fullName: string;
-  phone?: string;
-  university?: string;
+  dateOfBirth?: string;
+  zalo?: string;
+  bio?: string;
 }
 
 export interface ApiRoomInfo {
@@ -234,19 +244,84 @@ export interface ApiRoomInfo {
   district: string;
   price: number;
   deposit?: number;
+  roomImage?: string | null;
 }
 
-export interface ApiContractRequest {
+export interface ApiViewingRequest {
   _id: string;
+  roomId: string;
   tenantId: string;
   landlordId: string;
-  roomId: string;
-  tenantInfo: ApiTenantInfo;
+  scheduledTime: string;
+  status: ViewingStatus;
   roomInfo: ApiRoomInfo;
-  status: ContractRequestStatus;
-  rejectionReason?: string;
+  roomImage?: string | null;
+  roomArea?: number;
+  roomCapacity?: number;
+  landlordContact?: ApiLandlordContact;
+  payment?: ApiPayment | null;
+  tenantDecision?: DecisionStatus | null;
   createdAt: string;
   updatedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Payment
+// ---------------------------------------------------------------------------
+export type PaymentStatus = 'pending' | 'success' | 'failed' | 'refunded';
+
+export interface ApiPayment {
+  _id: string;
+  viewingId: string;
+  amount: number;
+  status: PaymentStatus;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Refund Request
+// ---------------------------------------------------------------------------
+export type RefundStatus = 'pending' | 'approved' | 'rejected';
+
+export interface ApiRefundRequest {
+  _id: string;
+  paymentId: string;
+  viewingId: string;
+  status: RefundStatus;
+  reason: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Admin Viewing DTO
+// ---------------------------------------------------------------------------
+export interface AdminViewingRoomDTO {
+  id: string;
+  title: string;
+  price: number;
+  address: string;
+  imageUrl: string;
+}
+
+export interface AdminViewingUserDTO {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+}
+
+export interface AdminViewingDTO {
+  id: string;
+  room: AdminViewingRoomDTO;
+  landlord: AdminViewingUserDTO;
+  tenant: AdminViewingUserDTO;
+  scheduledTime: string;
+  status: ViewingStatus;
+  paymentStatus: PaymentStatus | 'none';
+  landlordDecision: DecisionStatus | null;
+  tenantDecision: DecisionStatus | null;
+  refundStatus: RefundStatus | 'none';
+  refundId: string | null;
 }
 
 // ---------------------------------------------------------------------------

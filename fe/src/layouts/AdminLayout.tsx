@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Bell, Home, FileText, Users, AlertCircle, Settings, LogOut } from 'lucide-react';
+import { Bell, Home, FileText, Users, AlertCircle, Settings, LogOut, CalendarClock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -36,6 +36,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <li>
               <NavLink to="/admin/rooms" className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-md ${isActive ? 'bg-primary/5 text-primary' : 'text-foreground'}`}>
                 <FileText className="h-4 w-4" /> Quản lý Tin đăng
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/admin/viewings" className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-md ${isActive ? 'bg-primary/5 text-primary' : 'text-foreground'}`}>
+                <CalendarClock className="h-4 w-4" /> Theo dõi xem phòng
               </NavLink>
             </li>
             <li>
