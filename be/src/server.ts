@@ -9,7 +9,6 @@ import {
   notFoundMiddleware,
 } from "./middleware/error.middleware";
 
-
 // Load environment variables first so process.env is populated before use
 dotenv.config();
 
@@ -19,16 +18,18 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 // cors() with no arguments allows all origins — safe for local development.
 // Tighten this in production via the FRONTEND_URL environment variable.
-app.use(cors({
-  origin: process.env.FRONTEND_URL || true,
-  credentials: false,
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || true,
+    credentials: false,
+  }),
+);
 
 // JSON body limit: 1 MB is generous for all normal API payloads.
 // File uploads (avatars) bypass this entirely because they use
 // multipart/form-data handled by multer — they never touch express.json().
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 // Serve uploaded files (avatars, etc.) as static assets
 app.use("/uploads", express.static(path.resolve(__dirname, "../uploads")));
@@ -46,7 +47,7 @@ app.use(errorMiddleware);
 const startServer = async () => {
   try {
     console.log(`\n🚀 Starting Roomie Connect API Server...\n`);
-    
+
     await connectDatabase();
 
     app.listen(PORT, () => {
@@ -57,7 +58,7 @@ const startServer = async () => {
 📡 Server: http://localhost:${PORT}
 🔗 API: http://localhost:${PORT}/api
 📊 Health: http://localhost:${PORT}/api/health
-🔐 JWT Secret: ${process.env.JWT_SECRET ? '✓ Configured' : '⚠️ Using default'}
+🔐 JWT Secret: ${process.env.JWT_SECRET ? "✓ Configured" : "⚠️ Using default"}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     });
   } catch (error) {
