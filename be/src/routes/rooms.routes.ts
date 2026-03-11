@@ -5,6 +5,7 @@ import {
   landlordOnly,
   AuthRequest,
 } from "../middleware/auth.middleware";
+import { checkSubscriptionMiddleware } from "../middleware/subscription.middleware";
 
 const router = Router();
 
@@ -81,6 +82,7 @@ router.post(
   "/",
   authMiddleware,
   landlordOnly,
+  checkSubscriptionMiddleware,
   async (req: AuthRequest, res: Response) => {
     try {
       const roomData = {

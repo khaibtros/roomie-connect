@@ -6,11 +6,14 @@ import { PayOS } from "@payos/node";
 const payos = new PayOS({
   clientId: process.env.PAYOS_CLIENT_ID || "CLIENT_ID",
   apiKey: process.env.PAYOS_API_KEY || "API_KEY",
-  checksumKey: process.env.PAYOS_CHECKSUM_KEY || "CHECKSUM_KEY"
+  checksumKey: process.env.PAYOS_CHECKSUM_KEY || "CHECKSUM_KEY",
 });
 
 // Subscription package prices (Maintenance fees)
-const PACKAGE_PRICES: Record<SubscriptionPackage, { maintenance: number; commission: number }> = {
+const PACKAGE_PRICES: Record<
+  SubscriptionPackage,
+  { maintenance: number; commission: number }
+> = {
   three_month: {
     maintenance: 1050000,
     commission: 200000,
@@ -26,7 +29,10 @@ const PACKAGE_PRICES: Record<SubscriptionPackage, { maintenance: number; commiss
 };
 
 // Calculate end date based on package type
-const calculateEndDate = (startDate: Date, packageType: SubscriptionPackage): Date => {
+const calculateEndDate = (
+  startDate: Date,
+  packageType: SubscriptionPackage,
+): Date => {
   const end = new Date(startDate);
   switch (packageType) {
     case "three_month":
@@ -95,17 +101,27 @@ export const subscribe = async (req: Request, res: Response) => {
       return;
     }
 
-    if (!packageType || !["three_month", "six_month", "yearly"].includes(packageType)) {
+    if (
+      !packageType ||
+      !["three_month", "six_month", "yearly"].includes(packageType)
+    ) {
       res.status(400).json({ error: "Invalid package type" });
       return;
     }
 
-    console.log(`💳 Processing subscription for landlord: ${landlordId}, Package: ${packageType}`);
+    console.log(
+      `💳 Processing subscription for landlord: ${landlordId}, Package: ${packageType}`,
+    );
 
     const packageInfo = PACKAGE_PRICES[packageType as SubscriptionPackage];
-    const orderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000));
+    const orderCode = Number(
+      String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000),
+    );
     const startDate = new Date();
-    const endDate = calculateEndDate(startDate, packageType as SubscriptionPackage);
+    const endDate = calculateEndDate(
+      startDate,
+      packageType as SubscriptionPackage,
+    );
 
     const subscription = new Subscription({
       landlordId: new Types.ObjectId(landlordId),
@@ -123,7 +139,7 @@ export const subscribe = async (req: Request, res: Response) => {
     // Generate PayOS link
     const cancelUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/landlord/subscription?status=cancel`;
     const returnUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/landlord/subscription?status=success`;
-    
+
     let checkoutUrl = "";
     try {
       const paymentLinkResponse = await payos.paymentRequests.create({
@@ -168,14 +184,20 @@ export const subscribe = async (req: Request, res: Response) => {
 export const handlePayOSWebhook = async (req: Request, res: Response) => {
   try {
     const webhookData = await payos.webhooks.verify(req.body);
-    
+
     if (webhookData.code === "00") {
-      const subscription = await Subscription.findOne({ orderCode: webhookData.orderCode });
+      const subscription = await Subscription.findOne({
+        orderCode: webhookData.orderCode,
+      });
       if (subscription && subscription.status === "pending") {
         subscription.status = "active";
-        subscription.paymentId = webhookData.reference || String(webhookData.orderCode);
+        subscription.paymentId =
+          webhookData.reference || String(webhookData.orderCode);
         subscription.startDate = new Date();
-        subscription.endDate = calculateEndDate(subscription.startDate, subscription.packageType as SubscriptionPackage);
+        subscription.endDate = calculateEndDate(
+          subscription.startDate,
+          subscription.packageType as SubscriptionPackage,
+        );
         await subscription.save();
         console.log(`✅ Webhook: Subscription ${subscription._id} activated.`);
       }
@@ -261,7 +283,9 @@ export const getPackages = async (req: Request, res: Response) => {
 };
 
 // Helper: Check if landlord has active subscription
-export const hasActiveSubscription = async (landlordId: string): Promise<boolean> => {
+export const hasActiveSubscription = async (
+  landlordId: string,
+): Promise<boolean> => {
   try {
     const subscription = await Subscription.findOne({
       landlordId: new Types.ObjectId(landlordId),

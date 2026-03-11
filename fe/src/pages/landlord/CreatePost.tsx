@@ -215,6 +215,11 @@ export default function CreatePost() {
       const { data: roomData, error: roomError } = await apiClient.createRoom(roomPayload);
 
       if (roomError) {
+        if (roomError.includes("Active subscription required")) {
+          toast.error("Vui lòng đăng ký gói cước để tiếp tục đăng tin phòng trọ.");
+          navigate("/landlord/subscription");
+          return;
+        }
         throw new Error(roomError);
       }
 
