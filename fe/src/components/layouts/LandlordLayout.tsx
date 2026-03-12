@@ -24,7 +24,7 @@ const navItems = [
   { label: "Tổng quan", href: "/landlord/dashboard", icon: LayoutDashboard },
   { label: "Quản lý tin", href: "/landlord/posts", icon: FileText },
   { label: "Gói phí duy trì", href: "/landlord/subscription", icon: CreditCard },
-  { label: "Quản lý hợp đồng", href: "/landlord/contracts", icon: FileCheck },
+  { label: "Quản lý yêu cầu xem phòng", href: "/landlord/viewings", icon: FileCheck },
   { label: "Hồ sơ", href: "/landlord/profile", icon: User },
 ];
 

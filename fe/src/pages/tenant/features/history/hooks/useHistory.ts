@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react"
 import type { RoomHistoryItem } from "../types"
 import { historyService } from "../services/history.service"
+import { useAuth } from "@/contexts/AuthContext"
 
 interface UseHistoryReturn {
   items: RoomHistoryItem[]
@@ -9,6 +10,8 @@ interface UseHistoryReturn {
 }
 
 export function useHistory(): UseHistoryReturn {
+  const { user } = useAuth()
+  historyService.setUserId(user?.id || user?._id || null)
   const [items, setItems] = useState<RoomHistoryItem[]>(() =>
     historyService.getAll()
   )

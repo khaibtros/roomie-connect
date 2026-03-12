@@ -8,13 +8,20 @@ import {
   Eye,
   Trash2,
   ArrowRight,
-  FileText,
+  CalendarClock,
   Loader2,
 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -22,14 +29,20 @@ import { mapApiRoomToUiRoom } from "@/utils/mappers";
 import type { Room } from "@/types";
 import type { ApiFavorite, ApiRoom } from "@/types/api";
 
+interface SavedRoom extends Room {
+  favoritedAt: Date;
+}
+
 export default function SavedRooms() {
   const navigate = useNavigate();
   const { isAuthenticated, role, loading: authLoading } = useAuth();
 
-  const [rooms, setRooms] = useState<Room[]>([]);
+  const [rooms, setRooms] = useState<SavedRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [contractRequestingId, setContractRequestingId] = useState<string | null>(null);
+  const [viewingRequestingId, setViewingRequestingId] = useState<string | null>(null);
+  const [bookingDialogRoom, setBookingDialogRoom] = useState<SavedRoom | null>(null);
+  const [bookingTime, setBookingTime] = useState("");
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -44,13 +57,6 @@ export default function SavedRooms() {
     }
 
     fetchSavedRooms();
-
-    // Set up interval to refresh every 5 seconds for real-time updates
-    const interval = setInterval(() => {
-      fetchSavedRooms();
-    }, 5000);
-
-    return () => clearInterval(interval);
   }, [isAuthenticated, role, navigate]);
 
   const fetchSavedRooms = async () => {
@@ -68,7 +74,7 @@ export default function SavedRooms() {
       // Handle the response structure: { favorites: ApiFavorite[] }
       const favoritesData = data?.favorites || [];
       
-      let mappedRooms: Room[] = [];
+      let mappedRooms: SavedRoom[] = [];
       if (Array.isArray(favoritesData)) {
         mappedRooms = favoritesData
           .map((item: ApiFavorite) => {
@@ -84,11 +90,14 @@ export default function SavedRooms() {
             
             // Only map if we have valid room data with at least an id
             if (roomData && roomData._id) {
-              return mapApiRoomToUiRoom(roomData);
+              return {
+                ...mapApiRoomToUiRoom(roomData),
+                favoritedAt: item.createdAt ? new Date(item.createdAt) : new Date(),
+              };
             }
             return null;
           })
-          .filter((room): room is Room => room !== null);
+          .filter((room): room is SavedRoom => room !== null);
       }
       
       console.log("Mapped rooms:", mappedRooms);
@@ -120,20 +129,31 @@ export default function SavedRooms() {
     }
   };
 
-  const handleCreateContractRequest = async (room: Room) => {
-    setContractRequestingId(room.id);
+  const openBookingDialog = (room: SavedRoom) => {
+    setBookingDialogRoom(room);
+    setBookingTime("");
+  };
+
+  const handleConfirmBooking = async () => {
+    if (!bookingDialogRoom) return;
+    if (!bookingTime) {
+      toast.error("Vui lòng chọn thời gian xem phòng");
+      return;
+    }
+    setViewingRequestingId(bookingDialogRoom.id);
     try {
-      const { error } = await apiClient.createContractRequest(room.id);
+      const { error } = await apiClient.createViewingRequest(bookingDialogRoom.id, bookingTime);
       if (error) {
-        toast.error(error.includes("already have a pending") ? "Đã có yêu cầu đang chờ phê duyệt cho phòng này" : "Đã gửi yêu cầu hợp đồng thất bại");
+        toast.error(error.includes("already have a pending") ? "Đã có yêu cầu đang chờ phê duyệt cho phòng này" : "Gửi yêu cầu xem phòng thất bại");
         return;
       }
-      toast.success("Đã gửi yêu cầu hợp đồng cho chủ nhà!");
-    } catch (error) {
-      console.error("Error creating contract request:", error);
-      toast.error("Không thể tạo yêu cầu hợp đồng");
+      toast.success("Đã gửi yêu cầu xem phòng cho chủ nhà!");
+      setBookingDialogRoom(null);
+    } catch (err) {
+      console.error("Error creating viewing request:", err);
+      toast.error("Không thể tạo yêu cầu xem phòng");
     } finally {
-      setContractRequestingId(null);
+      setViewingRequestingId(null);
     }
   };
 
@@ -250,7 +270,7 @@ export default function SavedRooms() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          {timeAgo(new Date(room.postedAt))}
+                          {timeAgo(room.favoritedAt)}
                         </span>
                         <span className="flex items-center gap-1">
                           <Eye className="h-4 w-4" />
@@ -260,15 +280,19 @@ export default function SavedRooms() {
 
                       {/* Quick Info */}
                       <div className="flex gap-2 text-sm">
-                        <span className="px-2 py-1 bg-muted rounded-md">
-                          {room.area}m²
-                        </span>
+                        {room.area > 0 && (
+                          <span className="px-2 py-1 bg-muted rounded-md">
+                            {room.area}m²
+                          </span>
+                        )}
                         <span className="px-2 py-1 bg-muted rounded-md">
                           {room.maxOccupants} người
                         </span>
-                        <span className="px-2 py-1 bg-muted rounded-md">
-                          Tầng {room.floor}
-                        </span>
+                        {room.floor > 0 && (
+                          <span className="px-2 py-1 bg-muted rounded-md">
+                            Tầng {room.floor}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -285,23 +309,13 @@ export default function SavedRooms() {
                         Xem chi tiết
                       </Button>
                       <Button
-                        onClick={() => handleCreateContractRequest(room)}
-                        disabled={contractRequestingId === room.id}
+                        onClick={() => openBookingDialog(room)}
                         variant="secondary"
                         className="w-full rounded-lg"
                         size="sm"
                       >
-                        {contractRequestingId === room.id ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Đang gửi...
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="h-4 w-4 mr-2" />
-                            Gửi yêu cầu hợp đồng
-                          </>
-                        )}
+                        <CalendarClock className="h-4 w-4 mr-2" />
+                        Đặt lịch xem phòng
                       </Button>
                     </div>
 
@@ -331,6 +345,54 @@ export default function SavedRooms() {
           </div>
         )}
       </div>
+
+      {/* Booking Dialog */}
+      <Dialog open={!!bookingDialogRoom} onOpenChange={(open) => !open && setBookingDialogRoom(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Đặt lịch xem phòng</DialogTitle>
+            <DialogDescription>
+              {bookingDialogRoom?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Chọn ngày và giờ xem phòng</label>
+              <input
+                type="datetime-local"
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                value={bookingTime}
+                onChange={(e) => setBookingTime(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+              />
+            </div>
+            {bookingDialogRoom && (
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p><strong>Địa chỉ:</strong> {bookingDialogRoom.address}</p>
+                <p><strong>Giá:</strong> {formatPrice(bookingDialogRoom.price)}/tháng</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setBookingDialogRoom(null)}>
+              Hủy
+            </Button>
+            <Button
+              onClick={handleConfirmBooking}
+              disabled={!bookingTime || viewingRequestingId === bookingDialogRoom?.id}
+            >
+              {viewingRequestingId === bookingDialogRoom?.id ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang gửi...
+                </>
+              ) : (
+                "Xác nhận đặt lịch"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

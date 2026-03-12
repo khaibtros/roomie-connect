@@ -18,9 +18,17 @@ export {
   SubscriptionStatus 
 } from "./Subscription";
 export { 
-  ContractRequest, 
-  IContractRequest, 
-  ContractRequestStatus,
-  ITenantInfo,
+  ViewingRequest, 
+  IViewingRequest, 
+  ViewingStatus,
+  DecisionStatus,
   IRoomInfo,
-} from "./ContractRequest";
+  Payment,
+  IPayment,
+  PaymentStatus,
+  RefundRequest,
+  IRefundRequest,
+  RefundStatus,
+  ViewingDecision,
+  IViewingDecision,
+} from "./ViewingRequest";

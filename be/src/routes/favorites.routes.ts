@@ -8,7 +8,7 @@ const router = Router();
 router.get("/", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const favorites = await Favorite.find({ userId: req.userId })
-      .populate("roomId", "title price images address district")
+      .populate("roomId", "title price images address district area capacity")
       .sort({ createdAt: -1 });
 
     res.json({ favorites });

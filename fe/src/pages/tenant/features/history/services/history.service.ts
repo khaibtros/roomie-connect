@@ -1,12 +1,24 @@
 import type { RoomHistoryItem } from "../types"
 
-const STORAGE_KEY = "room_view_history"
+const STORAGE_KEY_PREFIX = "room_view_history"
 const MAX_HISTORY = 50
 
+let _currentUserId: string | null = null
+
+function storageKey(): string {
+  return _currentUserId
+    ? `${STORAGE_KEY_PREFIX}_${_currentUserId}`
+    : STORAGE_KEY_PREFIX
+}
+
 export const historyService = {
+  setUserId(userId: string | null): void {
+    _currentUserId = userId
+  },
+
   getAll(): RoomHistoryItem[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY)
+      const raw = localStorage.getItem(storageKey())
       return raw ? (JSON.parse(raw) as RoomHistoryItem[]) : []
     } catch {
       return []
@@ -20,10 +32,10 @@ export const historyService = {
       { ...item, viewedAt: new Date().toISOString() },
       ...filtered,
     ].slice(0, MAX_HISTORY)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+    localStorage.setItem(storageKey(), JSON.stringify(updated))
   },
 
   clearAll(): void {
-    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(storageKey())
   },
 }

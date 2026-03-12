@@ -29,19 +29,21 @@ import ChangePasswordPage from "./pages/auth/ChangePassword";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import TenantAIChat from "./pages/tenant/AIChat";
 import TenantAIPayment from "./pages/tenant/AIPayment";
-import TenantContracts from "./pages/tenant/features/contracts/page";
+import TenantViewings from "./pages/tenant/features/contracts/page";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminRooms from "./pages/admin/Rooms";
 import AdminUsers from "./pages/admin/Users";
 import AdminReports from "./pages/admin/Reports";
 import AdminTransactions from "./pages/admin/Transactions";
 import AdminSettings from "./pages/admin/Settings";
+import AdminViewings from "./pages/admin/Viewings";
 import LandlordDashboard from "./pages/landlord/Dashboard";
 import LandlordPosts from "./pages/landlord/Posts";
 import LandlordWallet from "./pages/landlord/Wallet";
 import LandlordProfile from "./pages/landlord/Profile";
 import CreatePost from "./pages/landlord/CreatePost";
 import LandlordSubscription from "./pages/landlord/Subscription";
+import LandlordViewingPage from "./pages/landlord/ViewingManagement";
 import ContractManagement from "./pages/landlord/ContractManagement";
 import History from "./pages/History";
 import Notifications from "./pages/Notifications";
@@ -114,10 +116,10 @@ const App = () => (
               }
             />
             <Route
-              path="/tenant/contracts"
+              path="/tenant/viewings"
               element={
                 <ProtectedRoute role="tenant">
-                  <TenantContracts />
+                  <TenantViewings />
                 </ProtectedRoute>
               }
             />
@@ -156,10 +158,10 @@ const App = () => (
               }
             />
             <Route
-              path="/landlord/contracts"
+              path="/landlord/viewings"
               element={
                 <ProtectedRoute role="landlord">
-                  <ContractManagement />
+                  <LandlordViewingPage />
                 </ProtectedRoute>
               }
             />
@@ -239,6 +241,14 @@ const App = () => (
               element={
                 <ProtectedRoute role="admin">
                   <AdminSettings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/viewings"
+              element={
+                <ProtectedRoute role="admin">
+                  <AdminViewings />
                 </ProtectedRoute>
               }
             />

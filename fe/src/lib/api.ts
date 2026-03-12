@@ -9,7 +9,11 @@ import type {
   ApiChat,
   ApiMessage,
   ApiRoommateProfile,
-  ApiContractRequest,
+  ApiViewingRequest,
+  ApiPayment,
+  ApiRefundRequest,
+  ViewingDecisionPayload,
+  AdminViewingDTO,
   ApiSubscription,
   ApiSubscriptionPackage,
   ApiFavorite,
@@ -385,42 +389,89 @@ class ApiClient {
     });
   }
 
-  // Contract endpoints
-  async getLandlordContracts() {
-    return this.request<{ contracts: ApiContractRequest[] }>('/contracts/landlord');
-  }
-
-  async getContractDetail(id: string) {
-    return this.request<{ contract: ApiContractRequest }>(`/contracts/${id}`);
-  }
-
-  async approveContract(id: string) {
-    return this.request<{ contract: ApiContractRequest }>(`/contracts/${id}/approve`, {
+  // Viewing endpoints (Tenant)
+  async createViewingRequest(roomId: string, scheduledTime: string) {
+    return this.request<{ viewingRequest: ApiViewingRequest }>('/viewings/request', {
       method: 'POST',
+      body: JSON.stringify({ roomId, scheduledTime }),
     });
   }
 
-  async rejectContract(id: string, reason: string) {
-    return this.request<{ contract: ApiContractRequest }>(`/contracts/${id}/reject`, {
+  async getMyViewings() {
+    return this.request<{ viewings: ApiViewingRequest[] }>('/viewings/tenant');
+  }
+
+  async cancelViewing(id: string) {
+    return this.request<{ message: string }>(`/viewings/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async submitTenantDecision(id: string, payload: ViewingDecisionPayload) {
+    return this.request<{
+      viewing: ApiViewingRequest;
+      refund: ApiRefundRequest | null;
+    }>(`/viewings/${id}/decision`, {
       method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Viewing endpoints (Landlord)
+  async getLandlordViewings() {
+    return this.request<{ viewings: ApiViewingRequest[] }>('/landlord/viewings');
+  }
+
+  async approveViewing(id: string) {
+    return this.request<{ viewing: ApiViewingRequest }>(`/landlord/viewings/${id}/approve`, {
+      method: 'PATCH',
+    });
+  }
+
+  async rejectViewing(id: string, reason: string) {
+    return this.request<{ viewing: ApiViewingRequest }>(`/landlord/viewings/${id}/reject`, {
+      method: 'PATCH',
       body: JSON.stringify({ reason }),
     });
   }
 
-  async createContractRequest(roomId: string) {
-    return this.request<{ contractRequest: string }>('/contracts/request', {
+  async payViewing(id: string) {
+    return this.request<{
+      viewing: ApiViewingRequest;
+      payment: ApiPayment;
+    }>(`/landlord/viewings/${id}/pay`, {
       method: 'POST',
-      body: JSON.stringify({ roomId }),
     });
   }
 
-  async getTenantContracts() {
-    return this.request<{ contracts: ApiContractRequest[] }>('/contracts/tenant');
+  async submitLandlordDecision(id: string, payload: ViewingDecisionPayload) {
+    return this.request<{
+      viewing: ApiViewingRequest;
+      refund: ApiRefundRequest | null;
+    }>(`/landlord/viewings/${id}/decision`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   }
 
-  async cancelContractRequest(id: string) {
-    return this.request<{ message: string }>(`/contracts/${id}`, {
-      method: 'DELETE',
+  // Admin Viewing endpoints
+  async getAdminViewings() {
+    return this.request<{ viewings: AdminViewingDTO[] }>('/admin/viewings');
+  }
+
+  async getAdminViewing(id: string) {
+    return this.request<{ viewing: AdminViewingDTO }>(`/admin/viewings/${id}`);
+  }
+
+  async approveRefund(id: string) {
+    return this.request<{ message: string }>(`/admin/refunds/${id}/approve`, {
+      method: 'PATCH',
+    });
+  }
+
+  async rejectRefund(id: string) {
+    return this.request<{ message: string }>(`/admin/refunds/${id}/reject`, {
+      method: 'PATCH',
     });
   }
 

@@ -28,6 +28,7 @@ export default function Profile() {
   const { user, isAuthenticated, signOut, loading, role } = useAuth();
   const [savedCount, setSavedCount] = useState(0);
   const [viewedCount, setViewedCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
   const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
@@ -50,9 +51,24 @@ export default function Profile() {
         setSavedCount(Array.isArray(favorites) ? favorites.length : 0);
       }
       
-      // Get viewed rooms from localStorage (keyed by historyService)
-      const viewedRooms = JSON.parse(localStorage.getItem('room_view_history') || '[]');
+      // Get viewed rooms from per-user localStorage
+      const userId = user?.id || user?._id || null;
+      const historyKey = userId ? `room_view_history_${userId}` : 'room_view_history';
+      const viewedRooms = JSON.parse(localStorage.getItem(historyKey) || '[]');
       setViewedCount(Array.isArray(viewedRooms) ? viewedRooms.length : 0);
+
+      // Fetch notification count
+      try {
+        const notifRes = await apiClient.getNotifications();
+        if (notifRes.data) {
+          const data = notifRes.data as Record<string, unknown>;
+          const notifications = (data.notifications as unknown[]) || (Array.isArray(notifRes.data) ? notifRes.data as unknown[] : []);
+          const unread = Array.isArray(notifications) ? notifications.filter((n: any) => !n.isRead && !n.read).length : 0;
+          setNotificationCount(unread);
+        }
+      } catch {
+        // ignore notification fetch errors
+      }
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {
@@ -62,9 +78,9 @@ export default function Profile() {
 
   const MENU_ITEMS = [
     { icon: Heart, label: 'Phòng đã lưu', badge: savedCount.toString(), action: () => navigate('/saved-rooms') },
-    { icon: FileText, label: 'Theo dõi hợp đồng', action: () => navigate('/tenant/contracts') },
+    { icon: FileText, label: 'Theo dõi yêu cầu xem phòng', action: () => navigate('/tenant/viewings') },
     { icon: Clock, label: 'Lịch sử xem', badge: viewedCount.toString(), action: () => navigate('/history') },
-    { icon: Bell, label: 'Thông báo', badge: '2', action: () => navigate('/notifications') },
+    { icon: Bell, label: 'Thông báo', badge: notificationCount > 0 ? notificationCount.toString() : undefined, action: () => navigate('/notifications') },
     { icon: Shield, label: 'Quyền riêng tư', action: () => navigate('/privacy') },
     { icon: Lock, label: 'Đổi Mật Khẩu', action: () => navigate('/auth/change-password') },
     { icon: Star, label: 'Đánh giá ứng dụng', action: () => navigate('/rate-app') },
