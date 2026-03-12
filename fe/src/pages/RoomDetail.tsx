@@ -83,7 +83,13 @@ export default function RoomDetail() {
       if (error) {
         throw new Error(error);
       }
-      setRoom(data?.room ? mapApiRoomToUiRoom(data.room) : null);
+      const roomData = data?.room ? mapApiRoomToUiRoom(data.room) : null;
+      setRoom(roomData);
+      
+      // Track viewed room after successful load
+      if (roomData) {
+        trackViewedRoom(roomData);
+      }
     } catch (error) {
       console.error("Error fetching room:", error);
       toast.error("Không thể tải thông tin phòng");

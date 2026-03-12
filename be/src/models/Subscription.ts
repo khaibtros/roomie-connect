@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 
 export type SubscriptionPackage = "three_month" | "six_month" | "yearly";
-export type SubscriptionStatus = "active" | "expired" | "cancelled";
+export type SubscriptionStatus = "active" | "expired" | "cancelled" | "pending";
 
 export interface ISubscription extends Document {
   landlordId: Types.ObjectId;
@@ -12,6 +12,7 @@ export interface ISubscription extends Document {
   maintenanceFee: number; // Phí duy trì đăng tin
   commissionPerContract: number; // Hoa hồng per contract
   paymentId?: string;
+  orderCode?: number; // PayOS order code
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,8 +41,8 @@ const subscriptionSchema = new Schema<ISubscription>(
     },
     status: {
       type: String,
-      enum: ["active", "expired", "cancelled"],
-      default: "active",
+      enum: ["active", "expired", "cancelled", "pending"],
+      default: "pending",
     },
     maintenanceFee: {
       type: Number,
@@ -54,6 +55,9 @@ const subscriptionSchema = new Schema<ISubscription>(
     },
     paymentId: {
       type: String,
+    },
+    orderCode: {
+      type: Number,
     },
   },
   {

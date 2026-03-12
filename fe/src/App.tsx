@@ -44,6 +44,12 @@ import LandlordProfile from "./pages/landlord/Profile";
 import CreatePost from "./pages/landlord/CreatePost";
 import LandlordSubscription from "./pages/landlord/Subscription";
 import LandlordViewingPage from "./pages/landlord/ViewingManagement";
+import ContractManagement from "./pages/landlord/ContractManagement";
+import History from "./pages/History";
+import Notifications from "./pages/Notifications";
+import Privacy from "./pages/Privacy";
+import Support from "./pages/Support";
+import AppRating from "./pages/AppRating";
 
 
 const queryClient = new QueryClient();
@@ -258,6 +264,11 @@ const App = () => (
             <Route path="/matches" element={<Matches />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/history" element={<History />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/support" element={<Support />} />
+            <Route path="/app-rating" element={<AppRating />} />
             <Route
               path="/edit-profile"
               element={
