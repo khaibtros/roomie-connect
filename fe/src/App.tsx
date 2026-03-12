@@ -45,6 +45,7 @@ import LandlordProfile from "./pages/landlord/Profile";
 import CreatePost from "./pages/landlord/CreatePost";
 import LandlordSubscription from "./pages/landlord/Subscription";
 import LandlordViewingPage from "./pages/landlord/ViewingManagement";
+// import ContractManagement from "./pages/landlord/ContractManagement";
 import History from "./pages/History";
 import Notifications from "./pages/Notifications";
 import Privacy from "./pages/Privacy";
@@ -65,7 +66,9 @@ function ProtectedRoute({
   const location = useLocation();
 
   if (auth.loading) return <div className="container py-8">Loading...</div>;
-  if (!auth.user) return <Navigate to="/auth/login" state={{ from: location.pathname }} replace />;
+  if (!auth.user) {
+    return <Navigate to={`/auth/login?returnTo=${location.pathname}`} replace />;
+  }
   if (role && auth.role !== role && auth.role !== "admin") {
     return <div className="container py-8">Không có quyền truy cập</div>;
   }

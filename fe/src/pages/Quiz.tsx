@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { QuizPreferences } from '@/types';
 import { cn } from '@/lib/utils';
+import { apiClient } from '@/lib/api';
 
 interface QuizOption {
   value: string;
@@ -388,12 +389,22 @@ export default function Quiz() {
         setCurrentStep(currentStep + 1);
         setSelectedOption(null);
       } else {
-        // Quiz complete - navigate to matches
+        // Quiz complete - persist and navigate
         const finalAnswers = {
           ...answers,
           [currentQuestion.id]: value,
         } as QuizPreferences;
-        navigate('/matches', { state: { preferences: finalAnswers } });
+
+        apiClient
+          .updateMyRoommateProfile({ preferences: finalAnswers })
+          .then(() => {
+            navigate("/matches", { state: { preferences: finalAnswers } });
+          })
+          .catch((err) => {
+            console.error("Failed to save quiz results:", err);
+            // Still navigate even if save fails, but maybe show a toast
+            navigate("/matches", { state: { preferences: finalAnswers } });
+          });
       }
     }, 300);
   };

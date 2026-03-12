@@ -195,10 +195,10 @@ export default function Matches() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, refreshUser } = useAuth();
-  const preferences =
-    (location.state?.preferences as QuizPreferences) ||
-    DEFAULT_USER_PREFERENCES;
-  const [users, setUsers] = useState<User[]>([]);
+  const [preferences, setPreferences] = useState<QuizPreferences>(
+    (location.state?.preferences as QuizPreferences) || DEFAULT_USER_PREFERENCES
+  );
+  const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [unlockedUserIds, setUnlockedUserIds] = useState<Set<string>>(new Set());
   const [coinBalance, setCoinBalance] = useState<number>(user?.knockCoin ?? 0);
@@ -207,18 +207,59 @@ export default function Matches() {
   const [unlockingId, setUnlockingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    const initData = async () => {
+      setLoading(true);
+      try {
+        const loadPreferences = async () => {
+          // If we have state, use it
+          if (location.state?.preferences) {
+            setPreferences(location.state.preferences);
+            return;
+          }
+          
+          // If not authenticated, reset to defaults
+          if (!isAuthenticated) {
+            setPreferences(DEFAULT_USER_PREFERENCES);
+            return;
+          }
+
+          const { data } = await apiClient.getMyRoommateProfile();
+          if (data?.profile?.preferences && Object.keys(data.profile.preferences).length > 0) {
+            setPreferences(data.profile.preferences as QuizPreferences);
+          } else {
+            setPreferences(DEFAULT_USER_PREFERENCES);
+          }
+        };
+
+        await Promise.all([
+          loadPreferences(),
+          fetchUsers(),
+          fetchUnlocks()
+        ]);
+      } catch (error) {
+        console.error("Error initializing matches data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initData();
+  }, [isAuthenticated, location.state?.preferences]);
 
   useEffect(() => {
     setCoinBalance(user?.knockCoin ?? 0);
   }, [user?.knockCoin]);
 
-  useEffect(() => {
-    const loadUnlocks = async () => {
-      if (!isAuthenticated) {
-        setUnlockedUserIds(new Set());
-        return;
+  const fetchUnlocks = async () => {
+    if (!isAuthenticated) {
+      setUnlockedUserIds(new Set());
+      return;
+    }
+    try {
+      const { data } = await apiClient.getRoommateUnlocks();
+      if (data) {
+        setUnlockedUserIds(new Set(data.unlockedUserIds || []));
+        setCoinBalance(data.knockCoin ?? user?.knockCoin ?? 0);
       }
       const { data, error } = await apiClient.getRoommateUnlocks();
       if (error || !data) return;

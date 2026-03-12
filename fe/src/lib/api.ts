@@ -261,7 +261,18 @@ class ApiClient {
 
   async updateRoommateProfile(id: string, profileData: Partial<RoommateProfileInput>) {
     return this.request<{ profile: ApiRoommateProfile }>(`/roommates/${id}`, {
-      method: 'PUT',
+      method: "PUT",
+      body: JSON.stringify(profileData),
+    });
+  }
+
+  async getMyRoommateProfile() {
+    return this.request<{ profile: ApiRoommateProfile }>("/roommates/my");
+  }
+
+  async updateMyRoommateProfile(profileData: Partial<RoommateProfileInput>) {
+    return this.request<{ profile: ApiRoommateProfile }>("/roommates/my", {
+      method: "PUT",
       body: JSON.stringify(profileData),
     });
   }

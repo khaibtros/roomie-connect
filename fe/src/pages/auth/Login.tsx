@@ -22,15 +22,15 @@ const roleConfig: Record<UserRole, { title: string; icon: React.ElementType; col
 
 export default function Login() {
   const [searchParams] = useSearchParams();
-  const role = (searchParams.get('role') as UserRole) || 'tenant';
-  const returnTo = searchParams.get('returnTo');
+  const role = (searchParams.get("role") as UserRole) || "tenant";
+  const returnTo = searchParams.get("returnTo");
   const navigate = useNavigate();
   const location = useLocation();
-  const from = returnTo || location.state?.from;
+  const from = location.state?.from || returnTo;
   const { signIn, user, role: userRole, loading } = useAuth();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -42,14 +42,14 @@ export default function Login() {
     if (!loading && user && userRole) {
       if (from) {
         navigate(from, { replace: true });
-      } else if (userRole === 'admin') {
-        navigate('/admin/dashboard');
-      } else if (userRole === 'landlord') {
-        navigate('/landlord/dashboard');
+      } else if (userRole === "admin") {
+        navigate("/admin/dashboard");
+      } else if (userRole === "landlord") {
+        navigate("/landlord/dashboard");
       } else {
-        navigate('/tenant/find-room');
+        navigate("/tenant/find-room");
       }
-    } 
+    }
   }, [user, userRole, loading, navigate, from]);
 
   async function waitForRole(timeout = 2000) {

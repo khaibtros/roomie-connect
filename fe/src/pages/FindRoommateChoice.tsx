@@ -1,21 +1,54 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 
 export default function FindRoommateChoice() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const [hasPreferences, setHasPreferences] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkProfile = async () => {
+      // Reset state on each run to prevent session leakage
+      setHasPreferences(false);
+      setLoading(true);
+
+      if (!isAuthenticated) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const { data } = await apiClient.getMyRoommateProfile();
+        if (data?.profile?.preferences && Object.keys(data.profile.preferences).length > 0) {
+          setHasPreferences(true);
+        }
+      } catch (error) {
+        console.error("Error checking profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkProfile();
+  }, [isAuthenticated]);
 
   const goQuiz = () => navigate('/quiz');
+  const goMatches = () => navigate('/matches');
 
   const handleStartQuiz = () => {
     if (!isAuthenticated) {
-      navigate('/auth/login?returnTo=/quiz');
+      navigate('/auth/login?returnTo=/find-roommate');
       return;
     }
-    goQuiz();
+    if (hasPreferences) {
+      goMatches();
+    } else {
+      goQuiz();
+    }
   };
 
   return (
@@ -33,7 +66,9 @@ export default function FindRoommateChoice() {
                 <p className="text-sm text-muted-foreground">Sử dụng bộ câu hỏi được biên soạn để tìm roommate phù hợp.</p>
               </div>
             </div>
-            <Button onClick={handleStartQuiz} className="w-full">Trả lời bộ câu hỏi</Button>
+            <Button onClick={handleStartQuiz} className="w-full rounded-full" size="lg" disabled={loading}>
+              {loading ? "Đang tải..." : (hasPreferences ? "Xem kết quả Match" : "Trả lời bộ câu hỏi")}
+            </Button>
           </div>
 
           <div className="glass-card p-6 rounded-2xl">
