@@ -1,16 +1,50 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/layouts/AdminLayout';
+import { apiClient } from '@/lib/api';
 import { mockStats } from '@/lib/adminMockData';
-import { ArrowUpRight, ArrowDownRight, DollarSign, Users, FilePlus, CheckCircle } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, DollarSign, Users, FilePlus, CheckCircle, Loader2 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, CartesianGrid, Legend
 } from 'recharts';
+import type { AdminStats } from '@/types/api';
 
 const currency = (v: number) => v.toLocaleString('vi-VN') + '₫';
 
 export default function AdminDashboard() {
-  const { totals, revenueMonthly, userGrowth, recentActivity } = mockStats;
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data, error } = await apiClient.getAdminStats();
+        if (!error && data) {
+          setStats(data);
+        } else {
+          // Fallback to mock data if API fails
+          setStats(mockStats as unknown as AdminStats);
+        }
+      } catch {
+        setStats(mockStats as unknown as AdminStats);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  const { totals, revenueMonthly, userGrowth, recentActivity } = stats || mockStats;
 
   return (
     <AdminLayout>

@@ -15,6 +15,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   Ban,
+  User,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ import type {
   ApiViewingRequest,
   ViewingStatus,
   DecisionStatus,
+  RefundStatus,
   ApiPayment,
 } from "@/types/api";
 
@@ -54,6 +56,10 @@ interface ViewingItem {
   roomPrice: number;
   scheduledTime: string;
   status: ViewingStatus;
+  landlordDecision: DecisionStatus | null;
+  tenantContact?: { fullName: string; phone?: string } | null;
+  refundStatus: RefundStatus | "none";
+  refundId: string | null;
   payment: ApiPayment | null;
   createdAt: string;
 }
@@ -67,6 +73,10 @@ function mapApiViewingToItem(v: ApiViewingRequest): ViewingItem {
     roomPrice: v.roomInfo?.price || 0,
     scheduledTime: v.scheduledTime,
     status: v.status,
+    landlordDecision: v.landlordDecision ?? null,
+    tenantContact: v.tenantContact ?? null,
+    refundStatus: v.refund?.status ?? v.refundStatus ?? "none",
+    refundId: v.refund?.id ?? v.refundId ?? null,
     payment: v.payment ?? null,
     createdAt: v.createdAt,
   };
@@ -95,12 +105,12 @@ const STATUS_MAP: Record<
     Icon: CheckCircle2,
   },
   completed: {
-    label: "Thành công",
+    label: "Hoàn thành",
     className: "bg-blue-100 text-blue-800",
     Icon: CheckCircle2,
   },
   failed: {
-    label: "Không thành công",
+    label: "Không hoàn thành",
     className: "bg-red-100 text-red-800",
     Icon: XCircle,
   },
@@ -172,11 +182,63 @@ function DecisionSection({
   viewing,
   loading,
   onDecision,
+  onRequestRefund,
 }: {
   viewing: ViewingItem;
   loading: boolean;
   onDecision: (viewing: ViewingItem, decision: DecisionStatus) => void;
+  onRequestRefund: (viewing: ViewingItem) => void;
 }) {
+  if (viewing.landlordDecision != null) {
+    return viewing.landlordDecision === "confirmed" ? (
+      <div className="flex items-center gap-2 text-sm">
+        <CheckCircle2 className="w-4 h-4 text-green-500" />
+        <span className="font-medium text-green-600">Đã chốt</span>
+      </div>
+    ) : (
+      <div className="flex flex-col items-start gap-1.5">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-red-500">
+          <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+          <span>Không chốt thành công</span>
+        </div>
+        {viewing.refundStatus === "none" && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-orange-400 text-orange-600 hover:bg-orange-50 text-xs h-7 px-2"
+            disabled={loading}
+            onClick={() => onRequestRefund(viewing)}
+          >
+            {loading ? (
+              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+            ) : (
+              <CreditCard className="w-3.5 h-3.5 mr-1.5" />
+            )}
+            Yêu cầu hoàn tiền
+          </Button>
+        )}
+        {viewing.refundStatus === "pending" && (
+          <div className="flex items-center gap-1.5 text-xs text-orange-500 font-medium">
+            <Loader2 className="w-3.5 h-3.5 flex-shrink-0 animate-spin" />
+            <span>Đang chờ admin duyệt hoàn tiền</span>
+          </div>
+        )}
+        {viewing.refundStatus === "approved" && (
+          <div className="flex items-center gap-1.5 text-xs text-green-600 font-medium">
+            <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>Hoàn tiền thành công</span>
+          </div>
+        )}
+        {viewing.refundStatus === "rejected" && (
+          <div className="flex items-center gap-1.5 text-xs text-red-500 font-medium">
+            <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>Hoàn tiền thất bại</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex gap-2">
       <Button
@@ -221,6 +283,7 @@ function ViewingTable({
   onReject,
   onPay,
   onDecision,
+  onRequestRefund,
 }: {
   viewings: ViewingItem[];
   actionLoadingId: string | null;
@@ -229,19 +292,20 @@ function ViewingTable({
   onReject: (v: ViewingItem) => void;
   onPay: (v: ViewingItem) => void;
   onDecision: (v: ViewingItem, d: DecisionStatus) => void;
+  onRequestRefund: (v: ViewingItem) => void;
 }) {
   if (viewings.length === 0) return null;
 
   return (
     <div className="border rounded-lg overflow-hidden">
-      <Table>
+      <Table className="table-fixed w-full">
         <TableHeader>
           <TableRow>
-            <TableHead>Phòng</TableHead>
-            <TableHead>Lịch hẹn</TableHead>
-            <TableHead>Giá</TableHead>
-            <TableHead>Trạng thái</TableHead>
-            <TableHead className="text-right">Hành động</TableHead>
+            <TableHead className="w-[28%]">Phòng</TableHead>
+            <TableHead className="w-[22%]">Lịch hẹn</TableHead>
+            <TableHead className="w-[15%]">Giá</TableHead>
+            <TableHead className="w-[13%]">Trạng thái</TableHead>
+            <TableHead className="w-[22%] text-right">Hành động</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -249,13 +313,13 @@ function ViewingTable({
             const isLoading = actionLoadingId === v.id;
             return (
               <TableRow key={v.id}>
-                <TableCell className="font-medium max-w-[200px] truncate">
+                <TableCell className="font-medium truncate">
                   {v.roomTitle}
                 </TableCell>
-                <TableCell className="text-sm">
+                <TableCell className="text-sm whitespace-nowrap">
                   {formatDateTime(v.scheduledTime)}
                 </TableCell>
-                <TableCell className="text-primary font-semibold">
+                <TableCell className="text-primary font-semibold whitespace-nowrap">
                   {formatCurrency(v.roomPrice)}/tháng
                 </TableCell>
                 <TableCell>
@@ -301,11 +365,12 @@ function ViewingTable({
                       />
                     )}
 
-                    {v.status === "confirmed" && (
+                    {(v.status === "confirmed" || ((v.status === "completed" || v.status === "failed") && v.payment != null)) && (
                       <DecisionSection
                         viewing={v}
                         loading={isLoading}
                         onDecision={onDecision}
+                        onRequestRefund={onRequestRefund}
                       />
                     )}
 
@@ -407,7 +472,7 @@ export default function LandlordViewingPage() {
         rejectionReason,
       );
       if (error) {
-        toast.error("Lỗi từ chối yêu cầu xem phòng");
+        toast.error(typeof error === "string" ? error : "Lỗi từ chối yêu cầu xem phòng");
         return;
       }
       toast.success("Từ chối yêu cầu xem phòng thành công");
@@ -454,7 +519,7 @@ export default function LandlordViewingPage() {
         return;
       }
       toast.success(
-        decision === "confirmed" ? "Đã chốt thành công!" : "Đã từ chối",
+        decision === "confirmed" ? "Đã chốt thành công!" : "Không chốt thành công",
       );
       fetchViewings();
       setShowDetailDialog(false);
@@ -465,8 +530,26 @@ export default function LandlordViewingPage() {
     }
   };
 
+  const handleRequestRefund = async (viewing: ViewingItem) => {
+    try {
+      setActionLoadingId(viewing.id);
+      const { error } = await apiClient.requestLandlordRefund(viewing.id);
+      if (error) {
+        toast.error("Lỗi gửi yêu cầu hoàn tiền");
+        return;
+      }
+      toast.success("Đã gửi yêu cầu hoàn tiền, chờ admin xét duyệt!");
+      fetchViewings();
+      setShowDetailDialog(false);
+    } catch {
+      toast.error("Lỗi khi gửi yêu cầu hoàn tiền");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   // -----------------------------------------------------------------------
-  // Derived lists
+  // Derived lists – use landlordDecision to determine effective grouping
   // -----------------------------------------------------------------------
   const pendingViewings = viewings.filter((v) => v.status === "pending");
   const awaitingPaymentViewings = viewings.filter(
@@ -554,6 +637,7 @@ export default function LandlordViewingPage() {
               onReject={openRejectDialog}
               onPay={handlePay}
               onDecision={handleDecision}
+              onRequestRefund={handleRequestRefund}
             />
           </Section>
         )}
@@ -575,6 +659,7 @@ export default function LandlordViewingPage() {
               onReject={openRejectDialog}
               onPay={handlePay}
               onDecision={handleDecision}
+              onRequestRefund={handleRequestRefund}
             />
           </Section>
         )}
@@ -596,6 +681,7 @@ export default function LandlordViewingPage() {
               onReject={openRejectDialog}
               onPay={handlePay}
               onDecision={handleDecision}
+              onRequestRefund={handleRequestRefund}
             />
           </Section>
         )}
@@ -617,6 +703,7 @@ export default function LandlordViewingPage() {
               onReject={openRejectDialog}
               onPay={handlePay}
               onDecision={handleDecision}
+              onRequestRefund={handleRequestRefund}
             />
           </Section>
         )}
@@ -638,6 +725,7 @@ export default function LandlordViewingPage() {
               onReject={openRejectDialog}
               onPay={handlePay}
               onDecision={handleDecision}
+              onRequestRefund={handleRequestRefund}
             />
           </Section>
         )}
@@ -708,6 +796,33 @@ export default function LandlordViewingPage() {
                 <ViewingStatusBadge status={selectedViewing.status} />
               </div>
 
+              {/* Tenant contact info for confirmed/completed/failed viewings */}
+              {(selectedViewing.status === "confirmed" || selectedViewing.status === "completed" || selectedViewing.status === "failed") &&
+                selectedViewing.tenantContact && (
+                  <div className="border rounded-lg p-4 bg-green-50">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <User className="w-4 h-4 text-green-600" />
+                      Thông Tin Người Thuê
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Họ và tên</p>
+                        <p className="font-medium">
+                          {selectedViewing.tenantContact.fullName}
+                        </p>
+                      </div>
+                      {selectedViewing.tenantContact.phone && (
+                        <div>
+                          <p className="text-muted-foreground">Số điện thoại</p>
+                          <p className="font-medium">
+                            {selectedViewing.tenantContact.phone}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
               {/* Status-specific actions */}
               {selectedViewing.status === "pending" && (
                 <div className="flex gap-3">
@@ -738,11 +853,12 @@ export default function LandlordViewingPage() {
                 />
               )}
 
-              {selectedViewing.status === "confirmed" && (
+              {(selectedViewing.status === "confirmed" || ((selectedViewing.status === "completed" || selectedViewing.status === "failed") && selectedViewing.payment != null)) && (
                 <DecisionSection
                   viewing={selectedViewing}
                   loading={actionLoadingId === selectedViewing.id}
                   onDecision={handleDecision}
+                  onRequestRefund={handleRequestRefund}
                 />
               )}
             </div>

@@ -6,6 +6,7 @@ import {
   rejectViewing,
   payViewing,
   submitViewingDecision,
+  requestRefund,
 } from "./landlord-viewing.controller";
 
 const router = Router();
@@ -17,5 +18,6 @@ router.patch("/:id/approve", approveViewing);
 router.patch("/:id/reject", rejectViewing);
 router.post("/:id/pay", payViewing);
 router.post("/:id/decision", submitViewingDecision);
+router.post("/:id/refund", requestRefund);
 
 export default router;

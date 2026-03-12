@@ -777,8 +777,8 @@ async function seed() {
       Notification.deleteMany({}),
     ]);
 
-    // Create admin user
-    console.log("👤 Creating admin user...");
+    // Create admin users
+    console.log("👤 Creating admin users...");
     const adminPassword = await bcrypt.hash("admin123", 10);
     const admin = await User.create({
       email: "admin@roomie.com",

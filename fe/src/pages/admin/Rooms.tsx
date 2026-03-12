@@ -1,23 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '@/layouts/AdminLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
-import type { ApiRoom } from '@/types/api';
+import type { ApiRoom, ApiUser, RoomStatus } from '@/types/api';
 
-type RoomStatus = 'pending' | 'active' | 'rejected';
+function getLandlordName(landlordId: string | ApiUser): string {
+  return typeof landlordId === 'object' ? landlordId.fullName : 'N/A';
+}
 
 export default function AdminRooms() {
   const [rooms, setRooms] = useState<ApiRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<RoomStatus | 'all'>('pending');
 
-  useEffect(() => {
-    fetchRooms();
-  }, [activeTab]);
-
-  const fetchRooms = async () => {
+  const fetchRooms = useCallback(async () => {
     try {
       setLoading(true);
       const params = activeTab === 'all' ? {} : { status: activeTab };
@@ -27,13 +25,17 @@ export default function AdminRooms() {
         throw new Error(error);
       }
       setRooms(data?.rooms || []);
-    } catch (error) {
-      console.error('Error fetching rooms:', error);
+    } catch (err) {
+      console.error('Error fetching rooms:', err);
       toast.error('Không thể tải danh sách tin đăng');
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchRooms();
+  }, [fetchRooms]);
 
   const handleApprove = async (id: string) => {
     try {
@@ -43,8 +45,8 @@ export default function AdminRooms() {
       }
       toast.success('Đã phê duyệt tin đăng');
       fetchRooms();
-    } catch (error) {
-      console.error('Error approving room:', error);
+    } catch (err) {
+      console.error('Error approving room:', err);
       toast.error('Không thể phê duyệt tin đăng');
     }
   };
@@ -60,8 +62,8 @@ export default function AdminRooms() {
       }
       toast.success('Đã từ chối tin đăng');
       fetchRooms();
-    } catch (error) {
-      console.error('Error rejecting room:', error);
+    } catch (err) {
+      console.error('Error rejecting room:', err);
       toast.error('Không thể từ chối tin đăng');
     }
   };
@@ -124,7 +126,7 @@ export default function AdminRooms() {
             </thead>
             <tbody className="divide-y">
               {rooms.map(r => (
-                <tr key={r.id || r._id}>
+                <tr key={r._id}>
                   <td className="px-4 py-3">
                     {r.images?.[0] ? (
                       <img src={r.images[0]} alt="" className="h-12 w-20 bg-slate-100 rounded object-cover" />
@@ -133,10 +135,10 @@ export default function AdminRooms() {
                     )}
                   </td>
                   <td className="px-4 py-3 max-w-xs truncate">{r.title}</td>
-                  <td className="px-4 py-3">{r.landlordId?.fullName || 'N/A'}</td>
+                  <td className="px-4 py-3">{getLandlordName(r.landlordId)}</td>
                   <td className="px-4 py-3">{r.price?.toLocaleString('vi-VN')}₫</td>
                   <td className="px-4 py-3">
-                    {r.created_at ? new Date(r.created_at).toLocaleDateString('vi-VN') : 'N/A'}
+                    {r.createdAt ? new Date(r.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded-full text-xs ${
@@ -151,12 +153,12 @@ export default function AdminRooms() {
                   </td>
                   <td className="px-4 py-3 text-right space-x-2">
                     {r.status !== 'active' && (
-                      <Button size="sm" onClick={() => handleApprove(r.id || r._id)}>
+                      <Button size="sm" onClick={() => handleApprove(r._id)}>
                         Duyệt
                       </Button>
                     )}
                     {r.status !== 'rejected' && (
-                      <Button variant="ghost" size="sm" onClick={() => handleReject(r.id || r._id)}>
+                      <Button variant="ghost" size="sm" onClick={() => handleReject(r._id)}>
                         Từ chối
                       </Button>
                     )}

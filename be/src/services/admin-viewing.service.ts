@@ -42,6 +42,7 @@ export interface AdminViewingDTO {
   tenantDecision: DecisionStatus | null;
   refundStatus: RefundStatus | "none";
   refundId: string | null;
+  rejectionReason: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -124,6 +125,7 @@ export const adminViewingService = {
         tenantDecision: decision?.tenantDecision ?? null,
         refundStatus: refund ? refund.status : "none",
         refundId: refund ? (refund._id as Types.ObjectId).toString() : null,
+        rejectionReason: v.rejectionReason || null,
       };
     });
   },
@@ -172,6 +174,7 @@ export const adminViewingService = {
       tenantDecision: decision?.tenantDecision ?? null,
       refundStatus: refund ? refund.status : "none",
       refundId: refund ? (refund._id as Types.ObjectId).toString() : null,
+      rejectionReason: v.rejectionReason || null,
     };
   },
 

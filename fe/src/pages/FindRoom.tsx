@@ -14,7 +14,7 @@ import type { Room } from "@/types";
 
 const DEFAULT_FILTERS: RoomFiltersState = {
   areas: [],
-  priceRange: [1000000, 6000000],
+  priceRange: [1000000, 10000000],
   sizes: [],
   roomTypes: [],
   regulations: [],

@@ -42,6 +42,9 @@ interface LandlordViewingDTO {
   roomArea: number;
   roomCapacity: number;
   status: ViewingStatus;
+  landlordDecision: DecisionStatus | null;
+  tenantContact?: { fullName: string; phone?: string };
+  refund: { id: string; status: string } | null;
   payment: PaymentDTO | null;
   createdAt: Date;
   updatedAt: Date;
@@ -88,16 +91,48 @@ export const viewingService = {
       ]),
     );
 
-    // Fetch payments for these viewings in one query
+    // Fetch payments and decisions for these viewings in one query
     const viewingIds = viewings.map((v) => v._id);
-    const payments = await Payment.find({ viewingId: { $in: viewingIds } });
+    const [payments, decisions, refunds] = await Promise.all([
+      Payment.find({ viewingId: { $in: viewingIds } }),
+      ViewingDecision.find({ viewingId: { $in: viewingIds } }).select("viewingId landlordDecision"),
+      RefundRequest.find({ viewingId: { $in: viewingIds } }).select("viewingId status"),
+    ]);
     const paymentMap = new Map<string, IPayment>(
       payments.map((p) => [p.viewingId.toString(), p]),
+    );
+    const decisionMap = new Map<string, DecisionStatus | null>(
+      decisions.map((d) => [d.viewingId.toString(), d.landlordDecision ?? null]),
+    );
+    const refundMap = new Map<string, IRefundRequest>(
+      refunds.map((r) => [r.viewingId.toString(), r]),
+    );
+
+    // Fetch tenant contact info for confirmed/completed viewings
+    const confirmedViewings = viewings.filter(
+      (v) => v.status === "confirmed" || v.status === "completed" || v.status === "failed",
+    );
+    const tenantIds = [
+      ...new Set(confirmedViewings.map((v) => v.tenantId.toString())),
+    ];
+    const tenants = await User.find({ _id: { $in: tenantIds } }).select(
+      "_id fullName phone",
+    );
+    const tenantMap = new Map<string, { fullName: string; phone?: string }>(
+      tenants.map((t) => [
+        t._id.toString(),
+        { fullName: t.fullName, phone: t.phone },
+      ]),
     );
 
     return viewings.map((v) => {
       const extra = roomExtraMap.get(v.roomId.toString());
       const payment = paymentMap.get(v._id.toString()) || null;
+      const refund = refundMap.get(v._id.toString()) || null;
+      const tenantContact =
+        v.status === "confirmed" || v.status === "completed" || v.status === "failed"
+          ? tenantMap.get(v.tenantId.toString()) || undefined
+          : undefined;
       return {
         _id: v._id as Types.ObjectId,
         roomId: v.roomInfo?.roomId || v.roomId,
@@ -116,6 +151,11 @@ export const viewingService = {
         roomArea: extra?.area || 0,
         roomCapacity: extra?.capacity || 1,
         status: v.status,
+        landlordDecision: decisionMap.get(v._id.toString()) ?? null,
+        tenantContact,
+        refund: refund
+          ? { id: (refund._id as Types.ObjectId).toString(), status: refund.status }
+          : null,
         payment: payment
           ? {
               _id: payment._id as Types.ObjectId,
@@ -129,6 +169,41 @@ export const viewingService = {
         updatedAt: v.updatedAt,
       };
     });
+  },
+
+  /**
+   * Landlord requests a refund after rejecting the viewing.
+   * Creates a RefundRequest linked to the payment for admin review.
+   */
+  async requestLandlordRefund(
+    viewingId: string,
+    landlordId: string,
+  ): Promise<IRefundRequest> {
+    const viewing = await ViewingRequest.findById(viewingId);
+    if (!viewing) throw new ServiceError(404, "Viewing request not found");
+    if (viewing.landlordId.toString() !== landlordId)
+      throw new ServiceError(403, "Forbidden");
+    if (!["confirmed", "completed", "failed"].includes(viewing.status))
+      throw new ServiceError(400, "Can only request refund for confirmed, completed, or failed viewings");
+
+    const viewingDecision = await ViewingDecision.findOne({ viewingId: viewing._id });
+    if (!viewingDecision || viewingDecision.landlordDecision !== "rejected")
+      throw new ServiceError(400, "Can only request refund after submitting a rejection decision");
+
+    const existing = await RefundRequest.findOne({ viewingId: viewing._id });
+    if (existing) throw new ServiceError(400, "Refund request already submitted");
+
+    const payment = await Payment.findOne({ viewingId: viewing._id, status: "success" });
+    if (!payment) throw new ServiceError(404, "No payment found for this viewing");
+
+    const refund = await RefundRequest.create({
+      viewingId: viewing._id,
+      paymentId: payment._id,
+      status: "pending",
+      reason: "Landlord requested refund after not confirming the viewing",
+    });
+
+    return refund;
   },
 
   /**
@@ -156,6 +231,7 @@ export const viewingService = {
   async rejectViewing(
     viewingId: string,
     landlordId: string,
+    reason?: string,
   ): Promise<IViewingRequest> {
     const viewing = await ViewingRequest.findById(viewingId);
     if (!viewing) throw new ServiceError(404, "Viewing request not found");
@@ -165,6 +241,7 @@ export const viewingService = {
       throw new ServiceError(400, "Only pending viewings can be rejected");
 
     viewing.status = "failed";
+    if (reason) viewing.rejectionReason = reason;
     await viewing.save();
     return viewing;
   },
@@ -201,8 +278,8 @@ export const viewingService = {
 
   /**
    * Landlord submits a decision after the viewing takes place.
-   * - confirmed → completed
-   * - rejected  → failed + RefundRequest created
+   * Decision is recorded as a signal for admin; it does NOT change
+   * the viewing status or affect the tenant's side.
    */
   async submitDecision(
     viewingId: string,
@@ -216,44 +293,20 @@ export const viewingService = {
     if (!viewing) throw new ServiceError(404, "Viewing request not found");
     if (viewing.landlordId.toString() !== landlordId)
       throw new ServiceError(403, "Forbidden");
-    if (viewing.status !== "confirmed")
+    if (!["confirmed", "completed", "failed"].includes(viewing.status))
       throw new ServiceError(
         400,
-        "Can only submit decision for confirmed viewings",
+        "Can only submit decision for confirmed/completed/failed viewings",
       );
 
-    let refund: IRefundRequest | null = null;
-
-    // Track landlord decision
-    const viewingDecision = await ViewingDecision.findOneAndUpdate(
+    // Track landlord decision (informational only – no status change)
+    await ViewingDecision.findOneAndUpdate(
       { viewingId: viewing._id },
       { landlordDecision: decision },
       { upsert: true, new: true },
     );
 
-    if (decision === "confirmed") {
-      // Only mark completed if tenant also confirmed
-      if (viewingDecision.tenantDecision === "confirmed") {
-        viewing.status = "completed";
-      }
-      // else stay "confirmed" until tenant decides
-    } else {
-      viewing.status = "failed";
-
-      // Find the associated payment and create a refund request
-      const payment = await Payment.findOne({ viewingId: viewing._id, status: "success" });
-      if (payment) {
-        refund = await RefundRequest.create({
-          viewingId: viewing._id,
-          paymentId: payment._id,
-          status: "pending",
-          reason: "Landlord rejected after viewing",
-        });
-      }
-    }
-
-    await viewing.save();
-    return { viewing, refund };
+    return { viewing, refund: null };
   },
 
   // =========================================================================
@@ -326,7 +379,9 @@ export const viewingService = {
       ]),
     );
 
-    const confirmedViewings = viewings.filter((v) => v.status === "confirmed");
+    const confirmedViewings = viewings.filter(
+      (v) => v.status === "confirmed" || v.status === "completed",
+    );
     const landlordIds = [
       ...new Set(confirmedViewings.map((v) => v.landlordId.toString())),
     ];
@@ -351,8 +406,15 @@ export const viewingService = {
 
     return viewings.map((v) => {
       const extra = roomExtraMap.get(v.roomId.toString());
+      const tenantDecision = decisionMap.get(v._id.toString()) ?? null;
+      // If tenant has already submitted a decision but status wasn't updated
+      // (handles legacy records created before status transition was implemented)
+      let effectiveStatus = v.status;
+      if (v.status === "confirmed" && tenantDecision != null) {
+        effectiveStatus = tenantDecision === "confirmed" ? "completed" : "failed";
+      }
       const landlordContact =
-        v.status === "confirmed"
+        effectiveStatus === "confirmed" || effectiveStatus === "completed" || effectiveStatus === "failed"
           ? landlordMap.get(v.landlordId.toString()) || undefined
           : undefined;
 
@@ -373,9 +435,10 @@ export const viewingService = {
         roomImage: extra?.image || null,
         roomArea: extra?.area || 0,
         roomCapacity: extra?.capacity || 1,
-        status: v.status,
-        tenantDecision: decisionMap.get(v._id.toString()) ?? null,
+        status: effectiveStatus,
+        tenantDecision,
         landlordContact,
+        rejectionReason: v.rejectionReason || null,
         createdAt: v.createdAt,
         updatedAt: v.updatedAt,
       };
@@ -384,9 +447,8 @@ export const viewingService = {
 
   /**
    * Tenant submits a decision after the viewing takes place.
-   * Updates ViewingDecision.tenantDecision.
-   * If both parties confirmed → completed.
-   * If tenant rejected → failed + RefundRequest created.
+   * Decision is recorded as a signal for admin; it does NOT change
+   * the viewing status or affect the landlord's side.
    */
   async submitTenantDecision(
     viewingId: string,
@@ -406,37 +468,17 @@ export const viewingService = {
         "Can only submit decision for confirmed viewings",
       );
 
-    // Track tenant decision
-    const viewingDecision = await ViewingDecision.findOneAndUpdate(
+    // Record tenant decision and update viewing status accordingly
+    await ViewingDecision.findOneAndUpdate(
       { viewingId: viewing._id },
       { tenantDecision: decision },
       { upsert: true, new: true },
     );
 
-    let refund: IRefundRequest | null = null;
-
-    if (decision === "rejected") {
-      viewing.status = "failed";
-
-      const payment = await Payment.findOne({ viewingId: viewing._id, status: "success" });
-      if (payment) {
-        refund = await RefundRequest.create({
-          viewingId: viewing._id,
-          paymentId: payment._id,
-          status: "pending",
-          reason: "Tenant rejected after viewing",
-        });
-      }
-    } else if (
-      viewingDecision.landlordDecision === "confirmed"
-    ) {
-      // Both confirmed → completed
-      viewing.status = "completed";
-    }
-    // else tenant confirmed but landlord hasn't decided yet → stay confirmed
-
+    viewing.status = decision === "confirmed" ? "completed" : "failed";
     await viewing.save();
-    return { viewing, refund };
+
+    return { viewing, refund: null };
   },
 
   /**

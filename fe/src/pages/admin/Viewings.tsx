@@ -63,7 +63,7 @@ const STATUS_MAP: Record<ViewingStatus, { label: string; className: string }> =
       className: "bg-yellow-100 text-yellow-800",
     },
     awaiting_payment: {
-      label: "Chờ thanh toán",
+      label: "Chờ chủ trọ thanh toán",
       className: "bg-orange-100 text-orange-800",
     },
     confirmed: {
@@ -71,7 +71,7 @@ const STATUS_MAP: Record<ViewingStatus, { label: string; className: string }> =
       className: "bg-green-100 text-green-800",
     },
     completed: {
-      label: "Hoàn thành",
+      label: "Thành công",
       className: "bg-blue-100 text-blue-800",
     },
     failed: {
@@ -80,7 +80,10 @@ const STATUS_MAP: Record<ViewingStatus, { label: string; className: string }> =
     },
   };
 
-function ViewingStatusBadge({ status }: { status: ViewingStatus }) {
+function ViewingStatusBadge({ status, rejectionReason }: { status: ViewingStatus; rejectionReason?: string | null }) {
+  if (status === "failed" && rejectionReason) {
+    return <Badge className="bg-orange-100 text-orange-800">Landlord đã hủy</Badge>;
+  }
   const cfg = STATUS_MAP[status];
   return <Badge className={cfg.className}>{cfg.label}</Badge>;
 }
@@ -164,14 +167,19 @@ function SummaryCards({ viewings }: { viewings: AdminViewingDTO[] }) {
       color: "text-green-600",
     },
     {
-      label: "Hoàn thành",
+      label: "Thành công",
       count: viewings.filter((v) => v.status === "completed").length,
       color: "text-blue-600",
     },
     {
       label: "Không thành công",
-      count: viewings.filter((v) => v.status === "failed").length,
+      count: viewings.filter((v) => v.status === "failed" && !v.rejectionReason).length,
       color: "text-red-600",
+    },
+    {
+      label: "Landlord đã hủy",
+      count: viewings.filter((v) => v.status === "failed" && !!v.rejectionReason).length,
+      color: "text-orange-600",
     },
     {
       label: "Đang chờ hoàn tiền",
@@ -181,7 +189,7 @@ function SummaryCards({ viewings }: { viewings: AdminViewingDTO[] }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
       {items.map((item) => (
         <Card key={item.label}>
           <CardContent className="pt-6">
@@ -253,7 +261,12 @@ function ViewingDetailDialog({
             </div>
             <div>
               <p className="text-muted-foreground">Trạng thái</p>
-              <ViewingStatusBadge status={viewing.status} />
+              <ViewingStatusBadge status={viewing.status} rejectionReason={viewing.rejectionReason} />
+              {viewing.rejectionReason && (
+                <p className="text-sm text-red-600 mt-1">
+                  Lý do từ chối: {viewing.rejectionReason}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -380,10 +393,11 @@ export default function AdminViewings() {
                   <TableHead>Chủ trọ</TableHead>
                   <TableHead>Người thuê</TableHead>
                   <TableHead>Thanh toán</TableHead>
+                  <TableHead>Trạng thái</TableHead>
                   <TableHead>Landlord</TableHead>
                   <TableHead>Tenant</TableHead>
                   <TableHead>Hoàn tiền</TableHead>
-                  <TableHead className="text-right">Hành động</TableHead>
+                  <TableHead className="text-center">Hành động</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -465,6 +479,18 @@ export default function AdminViewings() {
                       {/* Payment status */}
                       <TableCell>
                         <PaymentBadge status={v.paymentStatus} />
+                      </TableCell>
+
+                      {/* Viewing status */}
+                      <TableCell>
+                        <div className="space-y-1">
+                          <ViewingStatusBadge status={v.status} rejectionReason={v.rejectionReason} />
+                          {v.rejectionReason && (
+                            <p className="text-xs text-muted-foreground truncate max-w-[160px]" title={v.rejectionReason}>
+                              Lý do: {v.rejectionReason}
+                            </p>
+                          )}
+                        </div>
                       </TableCell>
 
                       {/* Landlord decision */}

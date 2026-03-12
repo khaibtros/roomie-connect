@@ -82,77 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkSession();
   }, []);
 
-  const DEMO_ACCOUNT_ROLE: Record<string, UserRole> = {
-    'admin@demo.com': 'admin',
-    'admin.demo@gmail.com': 'admin',
-    'admin@gmail.com': 'admin',            // optional alias
-    'landlord@demo.com': 'landlord',
-    'landlord.demo@gmail.com': 'landlord',
-    'landlord@gmail.com': 'landlord',
-    'tenant@demo.com': 'tenant',
-    'tenant.demo@gmail.com': 'tenant',
-    'tenant@gmail.com': 'tenant',
-  };
-
-  // Mock helper to seed demo accounts locally
-  const seedDemoAccount = (email: string) => {
-    const roleFor = DEMO_ACCOUNT_ROLE[email];
-    if (!roleFor) return;
-
-    // Clear any existing token before seeding new account
-    apiClient.setToken(null);
-    setRole(roleFor);
-    
-    if (roleFor === 'landlord') {
-      setWalletBalance(5000000);
-      setAiTokens(0);
-      setUser({
-        id: 'demo-landlord',
-        aud: 'demo',
-        created_at: new Date().toISOString(),
-        email,
-      } as unknown as User);
-      setSession(null);
-      setLoading(false);
-      return;
-    }
-
-    if (roleFor === 'tenant') {
-      setWalletBalance(0);
-      setAiTokens(20);
-      setUser({
-        id: 'demo-tenant',
-        aud: 'demo',
-        created_at: new Date().toISOString(),
-        email,
-      } as unknown as User);
-      setSession(null);
-      setLoading(false);
-      return;
-    }
-
-    if (roleFor === 'admin') {
-      setWalletBalance(0);
-      setAiTokens(0);
-      setUser({
-        id: 'demo-admin',
-        aud: 'demo',
-        created_at: new Date().toISOString(),
-        email,
-      } as unknown as User);
-      setSession(null);
-      setLoading(false);
-      return;
-    }
-  };
-
   const signUp = async (email: string, password: string, roleArg?: UserRole, metadata?: Record<string, unknown>) => {
-    // For mock-first flow, if demo emails used, seed locally
-    if (['landlord@demo.com', 'tenant@demo.com', 'admin@demo.com'].includes(email)) {
-      seedDemoAccount(email);
-      return { error: null };
-    }
-
     // Clear any existing token before registering with new account
     apiClient.setToken(null);
 
@@ -179,14 +109,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    if (DEMO_ACCOUNT_ROLE[email]) {
-      seedDemoAccount(email);
-      return { error: null };
-    }
-
     // Clear any existing token before logging in with new credentials
     apiClient.setToken(null);
-    
+
     // Call backend API to login
     try {
       const { data, error } = await apiClient.login(email, password);
@@ -219,16 +144,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    // If demo user: clear local mock state
-    if (user && user.id?.toString().startsWith('demo')) {
-      setUser(null);
-      setSession(null);
-      setRole(null);
-      setWalletBalance(0);
-      setAiTokens(0);
-      return;
-    }
-
     // Clear API token and state
     apiClient.setToken(null);
     setUser(null);
@@ -239,11 +154,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const changePassword = async (currentPassword: string, newPassword: string) => {
-    // Demo users cannot change password (they don't have real credentials)
-    if (user && user.id?.toString().startsWith('demo')) {
-      return { error: new Error('Demo accounts cannot change password') };
-    }
-
     try {
       const { data, error } = await apiClient.changePassword(currentPassword, newPassword);
 

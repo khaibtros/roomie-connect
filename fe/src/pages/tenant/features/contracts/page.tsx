@@ -38,6 +38,7 @@ interface ViewingItem {
   scheduledTime: string;
   status: ViewingStatus;
   tenantDecision?: DecisionStatus | null;
+  rejectionReason?: string | null;
   landlordContact?: {
     fullName: string;
     dateOfBirth?: string;
@@ -62,6 +63,7 @@ function mapApiViewingToItem(v: ApiViewingRequest): ViewingItem {
     scheduledTime: v.scheduledTime,
     status: v.status,
     tenantDecision: v.tenantDecision ?? null,
+    rejectionReason: v.rejectionReason ?? null,
     landlordContact: v.landlordContact,
     createdAt: v.createdAt,
   };
@@ -69,23 +71,23 @@ function mapApiViewingToItem(v: ApiViewingRequest): ViewingItem {
 
 const STATUS_CONFIG: Record<ViewingStatus, { label: string; color: string; icon: typeof HourglassIcon }> = {
   pending: {
-    label: "Đang chờ phê duyệt",
-    color: "bg-white/10 text-white border border-white/30",
+    label: "Đang chờ chủ trọ xác nhận",
+    color: "bg-gray-100 text-gray-800 border border-gray-300",
     icon: HourglassIcon,
   },
   awaiting_payment: {
-    label: "Chờ thanh toán",
-    color: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40",
+    label: "Chờ chủ trọ xác nhận",
+    color: "bg-yellow-100 text-yellow-800 border border-yellow-300",
     icon: CreditCard,
   },
   confirmed: {
     label: "Xác nhận đặt lịch thành công",
-    color: "bg-green-500/20 text-green-400 border border-green-500/40",
+    color: "bg-green-100 text-green-800 border border-green-300",
     icon: CheckCircle,
   },
   completed: {
     label: "Hoàn thành",
-    color: "bg-blue-500/20 text-blue-400 border border-blue-500/40",
+    color: "bg-blue-100 text-blue-800 border border-blue-300",
     icon: CheckCircle,
   },
   failed: {
@@ -103,7 +105,6 @@ export default function TenantViewings() {
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [decisionLoadingId, setDecisionLoadingId] = useState<string | null>(null);
-  const [decidedIds, setDecidedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -160,9 +161,15 @@ export default function TenantViewings() {
         return;
       }
       toast.success(
-        decision === "confirmed" ? "Đã chốt thành công!" : "Đã từ chối",
+        decision === "confirmed" ? "Đã chốt thành công!" : "Không chốt thành công",
       );
-      setDecidedIds((prev) => new Set(prev).add(viewingId));
+      setViewings((prev) =>
+        prev.map((v) =>
+          v.id === viewingId
+            ? { ...v, status: (decision === "confirmed" ? "completed" : "failed") as ViewingStatus, tenantDecision: decision }
+            : v,
+        ),
+      );
     } catch (err) {
       console.error("Error submitting decision:", err);
       toast.error("Không thể gửi quyết định");
@@ -207,6 +214,7 @@ export default function TenantViewings() {
   const pending = viewings.filter((v) => v.status === "pending");
   const confirmed = viewings.filter((v) => v.status === "confirmed");
   const completed = viewings.filter((v) => v.status === "completed");
+  const failed = viewings.filter((v) => v.status === "failed");
 
   return (
     <Layout>
@@ -329,8 +337,8 @@ export default function TenantViewings() {
                         </Badge>
                       </div>
 
-                      {/* Confirmed - show landlord contact */}
-                      {viewing.status === "confirmed" && viewing.landlordContact && (
+                      {/* Confirmed or completed - show landlord contact */}
+                      {(viewing.status === "confirmed" || viewing.status === "completed" || viewing.status === "failed") && viewing.landlordContact && (
                         <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20 space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle className="h-4 w-4 text-green-400 shrink-0" />
@@ -366,12 +374,19 @@ export default function TenantViewings() {
                       )}
 
                       {/* Failed message */}
-                      {viewing.status === "failed" && (
-                        <div className="flex items-center gap-2 p-3 bg-red-500/10 rounded-lg border border-red-500/20">
-                          <XCircle className="h-4 w-4 text-red-400 shrink-0" />
-                          <p className="text-sm text-red-300">
-                            Yêu cầu xem phòng đã thất bại
-                          </p>
+                      {viewing.status === "failed" && !viewing.tenantDecision && (
+                        <div className="p-3 bg-red-500/10 rounded-lg border border-red-500/20 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <XCircle className="h-4 w-4 text-red-400 shrink-0" />
+                            <p className="text-sm text-red-300">
+                              Chủ trọ đã từ chối yêu cầu xem phòng
+                            </p>
+                          </div>
+                          {viewing.rejectionReason && (
+                            <p className="text-sm text-red-300/80 pl-6">
+                              Lý do: {viewing.rejectionReason}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -388,16 +403,27 @@ export default function TenantViewings() {
                           Xem chi tiết
                         </Button>
 
-                        {/* Decision buttons for confirmed viewings */}
-                        {viewing.status === "confirmed" && (
-                          (decidedIds.has(viewing.id) || viewing.tenantDecision != null) ? (
-                            <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20 text-center">
-                              <CheckCircle className="h-5 w-5 text-green-500 mx-auto mb-1" />
-                              <p className="text-sm font-medium text-green-600">
-                                Cảm ơn bạn đã tin dùng KnockKnock
-                              </p>
-                            </div>
-                          ) : (
+                        {/* Decision buttons for confirmed viewings / result for completed */}
+                        {(viewing.status === "confirmed" || viewing.status === "completed" || viewing.status === "failed") && (() => {
+                          if (viewing.tenantDecision != null) {
+                            return viewing.tenantDecision === "confirmed" ? (
+                              <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20 text-center">
+                                <CheckCircle className="h-5 w-5 text-green-500 mx-auto mb-1" />
+                                <p className="text-sm font-medium text-green-600">
+                                  Cảm ơn bạn đã tin dùng KnockKnock
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="p-3 bg-red-500/10 rounded-lg border border-red-500/20 text-center">
+                                <XCircle className="h-5 w-5 text-red-500 mx-auto mb-1" />
+                                <p className="text-sm font-medium text-red-500">
+                                  Không chốt thành công
+                                </p>
+                              </div>
+                            );
+                          }
+                          if (viewing.status === "completed" || viewing.status === "failed") return null;
+                          return (
                             <div className="space-y-2 pt-2">
                               <p className="text-xs text-muted-foreground font-medium text-center">
                                 Bạn có muốn chốt phòng này?
@@ -436,8 +462,8 @@ export default function TenantViewings() {
                                 </Button>
                               </div>
                             </div>
-                          )
-                        )}
+                          );
+                        })()}
                       </div>
 
                       {viewing.status === "pending" && (

@@ -237,6 +237,11 @@ export interface ApiLandlordContact {
   bio?: string;
 }
 
+export interface ApiTenantContact {
+  fullName: string;
+  phone?: string;
+}
+
 export interface ApiRoomInfo {
   roomId: string;
   title: string;
@@ -259,8 +264,14 @@ export interface ApiViewingRequest {
   roomArea?: number;
   roomCapacity?: number;
   landlordContact?: ApiLandlordContact;
+  tenantContact?: ApiTenantContact;
   payment?: ApiPayment | null;
   tenantDecision?: DecisionStatus | null;
+  landlordDecision?: DecisionStatus | null;
+  refund?: { id: string; status: RefundStatus } | null;
+  refundStatus?: RefundStatus | 'none';
+  refundId?: string | null;
+  rejectionReason?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -322,6 +333,7 @@ export interface AdminViewingDTO {
   tenantDecision: DecisionStatus | null;
   refundStatus: RefundStatus | 'none';
   refundId: string | null;
+  rejectionReason: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -411,7 +423,8 @@ export interface RevenueMonthlyEntry {
 
 export interface UserGrowthEntry {
   month: string;
-  users: number;
+  landlords: number;
+  tenants: number;
 }
 
 export interface AdminStats {

@@ -92,19 +92,6 @@ export default function Login() {
     }
   };
 
-  const demoQuick = async (email: string) => {
-    setIsLoading(true);
-    const { error } = await signIn(email, 'demo123456');
-    await new Promise((r) => setTimeout(r, 100));
-    setIsLoading(false);
-
-    if (error) {
-      toast.error('Lỗi đăng nhập: ' + error.message);
-    } else {
-      toast.success('Đăng nhập thành công!');
-    }
-  };
-
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -249,11 +236,6 @@ export default function Login() {
             </Link>
           </p>
 
-          <div className="mt-4 flex gap-2">
-            <Button variant="ghost" onClick={() => demoQuick('landlord@demo.com')}>Demo Landlord</Button>
-            <Button variant="ghost" onClick={() => demoQuick('tenant@demo.com')}>Demo Tenant</Button>
-            <Button variant="ghost" onClick={() => demoQuick('admin@demo.com')}>Demo Admin</Button>
-          </div>
         </div>
       </motion.div>
     </div>

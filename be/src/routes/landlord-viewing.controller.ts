@@ -59,9 +59,11 @@ export const rejectViewing = async (
       return;
     }
 
+    const { reason } = req.body as { reason?: string };
     const viewing = await viewingService.rejectViewing(
       req.params.id,
       landlordId,
+      reason,
     );
     res.json({
       message: "Viewing rejected",
@@ -135,6 +137,32 @@ export const submitViewingDecision = async (
       refund: refund
         ? { _id: refund._id, status: refund.status, reason: refund.reason }
         : null,
+    });
+  } catch (err) {
+    handleError(res, err);
+  }
+};
+
+// POST /api/landlord/viewings/:id/refund
+export const requestRefund = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const landlordId = req.userId;
+    if (!landlordId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const refund = await viewingService.requestLandlordRefund(
+      req.params.id,
+      landlordId,
+    );
+
+    res.json({
+      message: "Refund request submitted",
+      refund: { _id: refund._id, status: refund.status, reason: refund.reason },
     });
   } catch (err) {
     handleError(res, err);

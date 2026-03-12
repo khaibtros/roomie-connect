@@ -128,17 +128,15 @@ function PriceFilter({ priceRange, onPriceChange }: PriceFilterProps) {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-foreground">
-                  {Math.floor(priceRange[0] / 1000000).toString().replace('.0', '')}.
-                  {Math.floor((priceRange[0] % 1000000) / 100000).toString().padStart(1, '0')} -
-                  {Math.floor(priceRange[1] / 1000000).toString().replace('.0', '')}.
-                  {Math.floor((priceRange[1] % 1000000) / 100000).toString().padStart(1, '0')} triệu VNĐ
+                  {(priceRange[0] / 1000000).toFixed(1).replace(/\.0$/, '')} -
+                  {' '}{(priceRange[1] / 1000000).toFixed(1).replace(/\.0$/, '')} triệu VNĐ
                 </span>
               </div>
               <Slider
                 value={priceRange}
                 onValueChange={(value) => onPriceChange([value[0], value[1]])}
                 min={1000000}
-                max={6000000}
+                max={10000000}
                 step={100000}
                 className="w-full"
               />

@@ -454,6 +454,13 @@ class ApiClient {
     });
   }
 
+  async requestLandlordRefund(id: string) {
+    return this.request<{ message: string; refund: ApiRefundRequest }>(
+      `/landlord/viewings/${id}/refund`,
+      { method: 'POST' },
+    );
+  }
+
   // Admin Viewing endpoints
   async getAdminViewings() {
     return this.request<{ viewings: AdminViewingDTO[] }>('/admin/viewings');

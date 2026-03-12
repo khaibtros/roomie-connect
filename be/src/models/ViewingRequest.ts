@@ -126,6 +126,7 @@ export interface IViewingRequest extends Document {
   scheduledTime: Date;
   roomInfo: IRoomInfo;
   status: ViewingStatus;
+  rejectionReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -164,6 +165,7 @@ const viewingRequestSchema = new Schema<IViewingRequest>(
       default: "pending",
       index: true,
     },
+    rejectionReason: { type: String, default: undefined },
   },
   { timestamps: true },
 );
