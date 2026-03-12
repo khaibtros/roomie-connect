@@ -277,6 +277,13 @@ class ApiClient {
     });
   }
 
+  async payForQuizRetake() {
+    return this.request<{ message: string; knockCoin: number; cost: number }>(
+      "/roommates/pay-retake",
+      { method: "POST" },
+    );
+  }
+
   // Admin endpoints
   async getAdminStats() {
     return this.request<AdminStats>('/admin/stats');

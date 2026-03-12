@@ -236,4 +236,33 @@ router.get("/:id", async (req, res: Response) => {
   }
 });
 
+// POST /api/roommates/pay-retake - Pay 50 coins to retake quiz
+router.post(
+  "/pay-retake",
+  authMiddleware,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const user = await User.findOneAndUpdate(
+        { _id: req.userId, knockCoin: { $gte: UNLOCK_COST_KNOCK_COIN } },
+        { $inc: { knockCoin: -UNLOCK_COST_KNOCK_COIN } },
+        { new: true },
+      ).select("knockCoin");
+
+      if (!user) {
+        res.status(402).json({ error: "Not enough Knock Coin" });
+        return;
+      }
+
+      res.json({
+        message: "Payment successful",
+        knockCoin: user.knockCoin ?? 0,
+        cost: UNLOCK_COST_KNOCK_COIN,
+      });
+    } catch (error) {
+      console.error("Pay retake error:", error);
+      res.status(500).json({ error: "Failed to process payment" });
+    }
+  },
+);
+
 export default router;

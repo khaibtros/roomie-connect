@@ -273,19 +273,21 @@ export default function Matches() {
       const { data, error } = await apiClient.getRoommateProfiles();
       if (error) throw new Error(error);
       
-      const mappedUsers = (data?.profiles || []).map((profile) => {
-        const u = typeof profile.userId === "object" ? profile.userId : null;
-        return {
-          id: u?._id || profile._id,
-          name: u?.fullName || "Người dùng",
-          avatar: u?.avatarUrl || "https://github.com/shadcn.png",
-          age: 20,
-          university: profile.university || u?.university || "Đại học FPT",
-          bio: profile.bio || "Chưa có giới thiệu",
-          preferences: profile.preferences || {},
-          verified: u?.isVerified || false,
-        };
-      });
+      const mappedUsers = (data?.profiles || [])
+        .map((profile) => {
+          const u = typeof profile.userId === "object" ? profile.userId : null;
+          return {
+            id: u?._id || profile._id,
+            name: u?.fullName || "Người dùng",
+            avatar: u?.avatarUrl || "https://github.com/shadcn.png",
+            age: 20,
+            university: profile.university || u?.university || "Đại học FPT",
+            bio: profile.bio || "Chưa có giới thiệu",
+            preferences: profile.preferences || {},
+            verified: u?.isVerified || false,
+          };
+        })
+        .filter((mappedUser) => mappedUser.id !== user?._id && mappedUser.id !== user?.id);
       setUsers(mappedUsers);
     } catch (error) {
       console.error("Error fetching roommate profiles:", error);
@@ -464,8 +466,51 @@ export default function Matches() {
           <p className="text-sm text-muted-foreground mb-3">
             Kết quả chưa chính xác?
           </p>
-          <Button variant="outline" asChild className="rounded-full">
-            <Link to="/quiz">Làm lại bài test</Link>
+          <Button 
+            variant="outline" 
+            className="rounded-full"
+            disabled={unlockingId === 'retake'}
+            onClick={async () => {
+              if (coinBalance < 50) {
+                toast.error("Bạn không đủ Knock Coin. Vui lòng nạp thêm!", {
+                  action: {
+                    label: "Nạp ngay",
+                    onClick: () => navigate("/tenant/ai-payment"),
+                  },
+                });
+                return;
+              }
+
+              setUnlockingId('retake');
+              try {
+                const { data, error } = await apiClient.payForQuizRetake();
+                if (error) {
+                  if (error.includes('HTTP 402') || error.includes('Not enough')) {
+                    toast.error('Bạn không đủ Knock Coin. Hãy nạp thêm để tiếp tục!', {
+                      action: {
+                        label: "Nạp ngay",
+                        onClick: () => navigate("/tenant/ai-payment"),
+                      },
+                    });
+                  } else {
+                    toast.error('Lỗi khi thực hiện giao dịch: ' + error);
+                  }
+                  return;
+                }
+                
+                if (data) {
+                  toast.success('Giao dịch thành công! Đang chuyển hướng...');
+                  refreshUser(); // Update coin balance in context
+                  setTimeout(() => navigate('/quiz'), 1500);
+                }
+              } catch (err) {
+                toast.error('Có lỗi xảy ra, vui lòng thử lại sau.');
+              } finally {
+                setUnlockingId(null);
+              }
+            }}
+          >
+            {unlockingId === 'retake' ? 'Đang xử lý...' : 'Làm lại bài test (50 Coin)'}
           </Button>
         </div>
       </div>
