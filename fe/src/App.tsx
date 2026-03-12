@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import FindRoom from "./pages/FindRoom";
@@ -45,7 +45,6 @@ import LandlordProfile from "./pages/landlord/Profile";
 import CreatePost from "./pages/landlord/CreatePost";
 import LandlordSubscription from "./pages/landlord/Subscription";
 import LandlordViewingPage from "./pages/landlord/ViewingManagement";
-import ContractManagement from "./pages/landlord/ContractManagement";
 import History from "./pages/History";
 import Notifications from "./pages/Notifications";
 import Privacy from "./pages/Privacy";
@@ -63,8 +62,10 @@ function ProtectedRoute({
   role?: "tenant" | "landlord" | "admin";
 }) {
   const auth = useAuth();
+  const location = useLocation();
+
   if (auth.loading) return <div className="container py-8">Loading...</div>;
-  if (!auth.user) return <Navigate to="/auth/login" replace />;
+  if (!auth.user) return <Navigate to="/auth/login" state={{ from: location.pathname }} replace />;
   if (role && auth.role !== role && auth.role !== "admin") {
     return <div className="container py-8">Không có quyền truy cập</div>;
   }
@@ -262,10 +263,38 @@ const App = () => (
             <Route path="/rate-app" element={<RatingPage />} />
             <Route path="/faq" element={<FAQPage />} />
             <Route path="/support/contact" element={<ContactSupportPage />} />
-            <Route path="/quiz" element={<Quiz />} />
-            <Route path="/matches" element={<Matches />} />
-            <Route path="/messages" element={<Messages />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route
+              path="/quiz"
+              element={
+                <ProtectedRoute>
+                  <Quiz />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/matches"
+              element={
+                <ProtectedRoute>
+                  <Matches />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/messages"
+              element={
+                <ProtectedRoute>
+                  <Messages />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/history" element={<History />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/privacy" element={<Privacy />} />

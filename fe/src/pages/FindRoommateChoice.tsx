@@ -1,22 +1,21 @@
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
 import { Sparkles, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import { LoginDialog } from '@/components/auth/LoginDialog';
 
 export default function FindRoommateChoice() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const [loginOpen, setLoginOpen] = useState(false);
+
+  const goQuiz = () => navigate('/quiz');
 
   const handleStartQuiz = () => {
     if (!isAuthenticated) {
-      setLoginOpen(true);
+      navigate('/auth/login?returnTo=/quiz');
       return;
     }
-    navigate('/quiz');
+    goQuiz();
   };
 
   return (
@@ -26,38 +25,32 @@ export default function FindRoommateChoice() {
         <p className="text-muted-foreground mb-6">Chọn một trong hai phương pháp dưới đây để tiếp tục.</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="glass-card p-6 rounded-2xl border-primary/20 bg-primary/5">
+          <div className="glass-card p-6 rounded-2xl">
             <div className="flex items-center gap-4 mb-4">
-              <Sparkles className="h-10 w-10 text-primary" />
+              <Sparkles className="h-8 w-8 text-primary" />
               <div>
-                <h2 className="font-semibold text-lg">Bộ câu hỏi trắc nghiệm</h2>
+                <h2 className="font-semibold">Bộ câu hỏi trắc nghiệm tính cách</h2>
                 <p className="text-sm text-muted-foreground">Sử dụng bộ câu hỏi được biên soạn để tìm roommate phù hợp.</p>
               </div>
             </div>
-            <Button onClick={handleStartQuiz} className="w-full rounded-full" size="lg">Trả lời bộ câu hỏi</Button>
+            <Button onClick={handleStartQuiz} className="w-full">Trả lời bộ câu hỏi</Button>
           </div>
 
-          <div className="glass-card p-6 rounded-2xl border-amber-500/20 bg-amber-500/5">
+          <div className="glass-card p-6 rounded-2xl">
             <div className="flex items-center gap-4 mb-4">
-              <Bot className="h-10 w-10 text-amber-500" />
+              <Bot className="h-8 w-8 text-amber-500" />
               <div>
-                <h2 className="font-semibold text-lg flex items-center gap-2">
+                <h2 className="font-semibold flex items-center gap-2">
                   Sử dụng AI Chatbot
-                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">VIP</span>
+                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs font-semibold">VIP</span>
                 </h2>
                 <p className="text-sm text-muted-foreground">AI sẽ gợi ý nhanh các ứng viên phù hợp. (Dịch vụ VIP)</p>
               </div>
             </div>
-            <Button onClick={() => navigate('/tenant/ai-chat')} variant="outline" className="w-full rounded-full border-amber-500/50 hover:bg-amber-500/10" size="lg">Mở AI Chatbot (VIP)</Button>
+            <Button onClick={() => navigate('/tenant/ai-chat')} className="w-full">Mở AI Chatbot (VIP)</Button>
           </div>
         </div>
       </div>
-
-      <LoginDialog 
-        open={loginOpen} 
-        onOpenChange={setLoginOpen} 
-        onSuccess={() => navigate('/quiz')}
-      />
     </Layout>
   );
 }

@@ -23,9 +23,10 @@ const roleConfig: Record<UserRole, { title: string; icon: React.ElementType; col
 export default function Login() {
   const [searchParams] = useSearchParams();
   const role = (searchParams.get('role') as UserRole) || 'tenant';
+  const returnTo = searchParams.get('returnTo');
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from;
+  const from = returnTo || location.state?.from;
   const { signIn, user, role: userRole, loading } = useAuth();
 
   const [email, setEmail] = useState('');
