@@ -398,8 +398,7 @@ export default function TenantAIChat() {
 
   // Use persistent backend counter for accurate out-of-coins detection
   const freeChatUsed = user?.aiFreeChatUsed ?? 0;
-  const isOutofCoins =
-    !isHistoryLoading && freeChatUsed >= 2 && knockCoin < 5;
+  const isOutofCoins = !isHistoryLoading && freeChatUsed >= 2 && knockCoin < 5;
 
   return (
     <Layout>

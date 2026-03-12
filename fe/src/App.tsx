@@ -3,7 +3,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import FindRoom from "./pages/FindRoom";
@@ -52,7 +58,6 @@ import Privacy from "./pages/Privacy";
 import Support from "./pages/Support";
 import AppRating from "./pages/AppRating";
 
-
 const queryClient = new QueryClient();
 
 function ProtectedRoute({
@@ -67,7 +72,9 @@ function ProtectedRoute({
 
   if (auth.loading) return <div className="container py-8">Loading...</div>;
   if (!auth.user) {
-    return <Navigate to={`/auth/login?returnTo=${location.pathname}`} replace />;
+    return (
+      <Navigate to={`/auth/login?returnTo=${location.pathname}`} replace />
+    );
   }
   if (role && auth.role !== role && auth.role !== "admin") {
     return <div className="container py-8">Không có quyền truy cập</div>;
@@ -87,8 +94,14 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/auth/login" element={<LoginPage />} />
             <Route path="/auth/register" element={<RegisterPage />} />
-            <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/auth/change-password" element={<ChangePasswordPage />} />
+            <Route
+              path="/auth/forgot-password"
+              element={<ForgotPasswordPage />}
+            />
+            <Route
+              path="/auth/change-password"
+              element={<ChangePasswordPage />}
+            />
 
             <Route path="/home" element={<Home />} />
             <Route path="/find-room" element={<FindRoom />} />
@@ -258,7 +271,10 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+            <Route
+              path="/admin"
+              element={<Navigate to="/admin/dashboard" replace />}
+            />
 
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/notifications" element={<NotificationPage />} />
@@ -321,5 +337,3 @@ const App = () => (
 );
 
 export default App;
-
-
