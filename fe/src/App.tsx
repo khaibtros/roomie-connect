@@ -26,6 +26,7 @@ import LoginPage from "./pages/auth/Login";
 import RegisterPage from "./pages/auth/Register";
 import ForgotPasswordPage from "./pages/auth/ForgotPassword";
 import ChangePasswordPage from "./pages/auth/ChangePassword";
+import ScrollToTop from "./components/ScrollToTop";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import TenantAIChat from "./pages/tenant/AIChat";
 import TenantAIPayment from "./pages/tenant/AIPayment";
@@ -77,6 +78,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ScrollToTop />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth/login" element={<LoginPage />} />

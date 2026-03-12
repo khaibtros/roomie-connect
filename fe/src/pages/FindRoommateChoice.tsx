@@ -1,10 +1,23 @@
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { Sparkles, Bot, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Layout } from '@/components/Layout';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function FindRoommateChoice() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  const goQuiz = () => navigate('/quiz');
+
+  const handleStartQuiz = () => {
+    if (!isAuthenticated) {
+      navigate('/auth/login', { state: { from: '/quiz' } });
+      return;
+    }
+    goQuiz();
+  };
 
   return (
     <Layout>
@@ -21,7 +34,7 @@ export default function FindRoommateChoice() {
                 <p className="text-sm text-muted-foreground">Sử dụng bộ câu hỏi được biên soạn để tìm roommate phù hợp.</p>
               </div>
             </div>
-            <Button onClick={() => navigate('/quiz')} className="w-full">Trả lời bộ câu hỏi</Button>
+            <Button onClick={handleStartQuiz} className="w-full">Trả lời bộ câu hỏi</Button>
           </div>
 
           <div className="glass-card p-6 rounded-2xl">
@@ -39,6 +52,7 @@ export default function FindRoommateChoice() {
           </div>
         </div>
       </div>
+
     </Layout>
   );
 }

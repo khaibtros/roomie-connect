@@ -1,8 +1,11 @@
 import { Router, Response } from "express";
+import mongoose from "mongoose";
 import { RoommateProfile, User } from "../models";
 import { authMiddleware, AuthRequest } from "../middleware/auth.middleware";
 
 const router = Router();
+
+const UNLOCK_COST_KNOCK_COIN = 50;
 
 // GET /api/roommates - List public roommate profiles
 router.get("/", async (req, res: Response) => {
@@ -37,6 +40,79 @@ router.get("/", async (req, res: Response) => {
     res.status(500).json({ error: "Failed to get roommate profiles" });
   }
 });
+
+// GET /api/roommates/unlocks - Get unlocked roommate userIds
+router.get(
+  "/unlocks",
+  authMiddleware,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const user = await User.findById(req.userId).select("unlockedRoommateUserIds knockCoin");
+      if (!user) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      res.json({
+        unlockedUserIds: (user.unlockedRoommateUserIds || []).map((id) => id.toString()),
+        knockCoin: user.knockCoin ?? 0,
+      });
+    } catch (error) {
+      console.error("Get roommate unlocks error:", error);
+      res.status(500).json({ error: "Failed to get unlocks" });
+    }
+  },
+);
+
+// POST /api/roommates/unlock - Purchase unlock for a roommate userId
+router.post(
+  "/unlock",
+  authMiddleware,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { targetUserId } = req.body as { targetUserId?: string };
+
+      if (!targetUserId || !mongoose.Types.ObjectId.isValid(targetUserId)) {
+        res.status(400).json({ error: "Invalid targetUserId" });
+        return;
+      }
+      if (targetUserId === req.userId?.toString()) {
+        res.status(400).json({ error: "Cannot unlock yourself" });
+        return;
+      }
+
+      const targetExists = await User.exists({ _id: targetUserId });
+      if (!targetExists) {
+        res.status(404).json({ error: "Target user not found" });
+        return;
+      }
+
+      const updated = await User.findOneAndUpdate(
+        { _id: req.userId, knockCoin: { $gte: UNLOCK_COST_KNOCK_COIN } },
+        {
+          $inc: { knockCoin: -UNLOCK_COST_KNOCK_COIN },
+          $addToSet: { unlockedRoommateUserIds: targetUserId },
+        },
+        { new: true },
+      ).select("knockCoin unlockedRoommateUserIds");
+
+      if (!updated) {
+        res.status(402).json({ error: "Not enough Knock Coin" });
+        return;
+      }
+
+      res.json({
+        message: "Unlocked",
+        knockCoin: updated.knockCoin ?? 0,
+        unlockedUserIds: (updated.unlockedRoommateUserIds || []).map((id) => id.toString()),
+        cost: UNLOCK_COST_KNOCK_COIN,
+      });
+    } catch (error) {
+      console.error("Unlock roommate error:", error);
+      res.status(500).json({ error: "Failed to unlock" });
+    }
+  },
+);
 
 // GET /api/roommates/my - Get current user's profile
 router.get("/my", authMiddleware, async (req: AuthRequest, res: Response) => {

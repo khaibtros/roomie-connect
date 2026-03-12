@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, ArrowLeft, LogIn, Building2, User, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,8 @@ export default function Login() {
   const [searchParams] = useSearchParams();
   const role = (searchParams.get('role') as UserRole) || 'tenant';
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from;
   const { signIn, user, role: userRole, loading } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -37,7 +39,9 @@ export default function Login() {
 
   useEffect(() => {
     if (!loading && user && userRole) {
-      if (userRole === 'admin') {
+      if (from) {
+        navigate(from, { replace: true });
+      } else if (userRole === 'admin') {
         navigate('/admin/dashboard');
       } else if (userRole === 'landlord') {
         navigate('/landlord/dashboard');
@@ -45,7 +49,7 @@ export default function Login() {
         navigate('/tenant/find-room');
       }
     } 
-  }, [user, userRole, loading, navigate]);
+  }, [user, userRole, loading, navigate, from]);
 
   async function waitForRole(timeout = 2000) {
     const start = Date.now();

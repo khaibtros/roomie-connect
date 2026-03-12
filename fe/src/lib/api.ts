@@ -234,6 +234,24 @@ class ApiClient {
     return this.request<{ profiles: ApiRoommateProfile[] }>('/roommates');
   }
 
+  async getRoommateUnlocks() {
+    return this.request<{ unlockedUserIds: string[]; knockCoin: number }>(
+      "/roommates/unlocks",
+    );
+  }
+
+  async unlockRoommate(targetUserId: string) {
+    return this.request<{
+      message: string;
+      knockCoin: number;
+      unlockedUserIds: string[];
+      cost: number;
+    }>("/roommates/unlock", {
+      method: "POST",
+      body: JSON.stringify({ targetUserId }),
+    });
+  }
+
   async createRoommateProfile(profileData: RoommateProfileInput) {
     return this.request<{ profile: ApiRoommateProfile }>('/roommates', {
       method: 'POST',
