@@ -21,6 +21,7 @@ interface User {
   created_at?: string;
   aud?: string;
   knockCoin?: number;
+  aiFreeChatUsed?: number;
 }
 
 interface AuthContextType {
@@ -29,7 +30,6 @@ interface AuthContextType {
   role: UserRole | null;
   loading: boolean;
   walletBalance: number; // for landlords (mock)
-  aiTokens: number; // for tenants
   isAuthenticated: boolean; // New convenience flag
   signUp: (email: string, password: string, role?: UserRole, metadata?: Record<string, unknown>) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -37,9 +37,6 @@ interface AuthContextType {
   changePassword: (currentPassword: string, newPassword: string) => Promise<{ error: Error | null }>;
   deductWallet: (amount: number) => boolean;
   topUpWallet: (amount: number) => void;
-  useAiToken: () => boolean;
-  setAiTokens: React.Dispatch<React.SetStateAction<number>>;
-  refreshAiTokens: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -53,7 +50,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Mock economy state
   const [walletBalance, setWalletBalance] = useState<number>(0);
-  const [aiTokens, setAiTokens] = useState<number>(0);
 
   useEffect(() => {
     // Check for existing session on mount
@@ -65,13 +61,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(data.user);
           setSession(token);
           setRole(data.user.role as UserRole);
-          // Load AI token balance from backend for tenants
-          if (data.user.role === 'tenant') {
-            try {
-              const tokenRes = await apiClient.getAiTokens();
-              if (tokenRes.data) setAiTokens(tokenRes.data.tokens);
-            } catch { /* ignore */ }
-          }
         } else {
           // Invalid token, clear it
           apiClient.setToken(null);
@@ -106,7 +95,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (roleFor === 'landlord') {
       setWalletBalance(5000000);
-      setAiTokens(0);
       setUser({
         id: 'demo-landlord',
         aud: 'demo',
@@ -120,12 +108,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (roleFor === 'tenant') {
       setWalletBalance(0);
-      setAiTokens(20);
       setUser({
         id: 'demo-tenant',
         aud: 'demo',
         created_at: new Date().toISOString(),
         email,
+        knockCoin: 20, // Add this to match the mock economic state
       } as unknown as User);
       setSession(null);
       setLoading(false);
@@ -134,7 +122,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (roleFor === 'admin') {
       setWalletBalance(0);
-      setAiTokens(0);
       setUser({
         id: 'demo-admin',
         aud: 'demo',
@@ -204,13 +191,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const fullUser = profileRes.data?.user ?? data.user;
         setUser(fullUser);
         setRole(fullUser.role as UserRole);
-        // Load AI token balance for tenants after login
-        if (fullUser.role === 'tenant') {
-          try {
-            const tokenRes = await apiClient.getAiTokens();
-            if (tokenRes.data) setAiTokens(tokenRes.data.tokens);
-          } catch { /* ignore */ }
-        }
       }
 
       return { error: null };
@@ -226,7 +206,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(null);
       setRole(null);
       setWalletBalance(0);
-      setAiTokens(0);
       return;
     }
 
@@ -236,7 +215,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setRole(null);
     setWalletBalance(0);
-    setAiTokens(0);
   };
 
   const changePassword = async (currentPassword: string, newPassword: string) => {
@@ -272,26 +250,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setWalletBalance((b) => b + amount);
   };
 
-  const useAiToken = () => {
-    if (aiTokens > 0) {
-      setAiTokens((t) => t - 1);
-      return true;
-    }
-    return false;
-  };
-
-  // Fetch real AI token balance from backend
-  const refreshAiTokens = async () => {
-    try {
-      const { data } = await apiClient.getAiTokens();
-      if (data) {
-        setAiTokens(data.tokens);
-      }
-    } catch (err) {
-      console.error('Failed to refresh AI tokens:', err);
-    }
-  };
-
   // Refresh user data from backend (after profile update)
   const refreshUser = async () => {
     try {
@@ -312,16 +270,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       isAuthenticated: !!user && !!role,
       walletBalance,
-      aiTokens,
       signUp,
       signIn,
       signOut,
       changePassword,
       deductWallet,
       topUpWallet,
-      useAiToken,
-      setAiTokens,
-      refreshAiTokens,
       refreshUser,
     }}>
       {children}

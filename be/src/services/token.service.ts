@@ -16,6 +16,9 @@ import { ResponseType, CHARGEABLE_TYPES } from "./response.types";
  *
  * @param responseType — the finalised pipeline outcome.
  */
+export const AI_MESSAGE_COST = 5;
+export const FREE_MESSAGE_LIMIT = 2;
+
 export function shouldChargeToken(responseType: ResponseType): boolean {
   return CHARGEABLE_TYPES.has(responseType);
 }

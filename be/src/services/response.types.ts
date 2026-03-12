@@ -33,11 +33,17 @@ export const CHARGEABLE_TYPES: ReadonlySet<ResponseType> = new Set([
   ResponseType.LLM_SUCCESS,
 ]);
 
-/** Response types that are explicitly FREE. */
+/** Response types that count as a used turn (including free ones that still consume the quota). */
+export const COUNTABLE_TYPES: ReadonlySet<ResponseType> = new Set([
+  ResponseType.DB_SUCCESS,
+  ResponseType.LLM_SUCCESS,
+  ResponseType.DB_EMPTY, // No coin charged, but still uses a free-chat slot
+]);
+
+/** Response types that are explicitly FREE and don't consume any quota. */
 export const FREE_TYPES: ReadonlySet<ResponseType> = new Set([
   ResponseType.VALIDATION,
   ResponseType.OUT_OF_SCOPE,
-  ResponseType.DB_EMPTY,
   ResponseType.CLARIFICATION,
   ResponseType.SYSTEM_ERROR,
 ]);
