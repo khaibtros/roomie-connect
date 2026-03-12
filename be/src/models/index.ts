@@ -32,3 +32,4 @@ export {
   ViewingDecision,
   IViewingDecision,
 } from "./ViewingRequest";
+export { CoinTransaction, ICoinTransaction } from "./CoinTransaction";

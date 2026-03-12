@@ -54,6 +54,7 @@ export interface ApiUser {
   isBanned: boolean;
   role: AppRole;
   aiTokens: AiTokens;
+  knockCoin: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -22,6 +22,7 @@ export interface IUser extends Document {
   isBanned: boolean;
   role: AppRole;
   aiTokens: IAiTokens;
+  knockCoin: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -69,6 +70,7 @@ const userSchema = new Schema<IUser>(
       type: aiTokensSchema,
       default: () => ({ tokens: 0, maxTokens: Infinity }),
     },
+    knockCoin: { type: Number, default: 0 },
   },
   {
     timestamps: true,

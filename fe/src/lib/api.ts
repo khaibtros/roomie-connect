@@ -454,6 +454,18 @@ class ApiClient {
     });
   }
 
+  // Knock Coin endpoints
+  async getCoinPackages() {
+    return this.request<{ packages: any[] }>('/coin/packages');
+  }
+
+  async purchaseCoins(packageType: string) {
+    return this.request<{ transaction: any; checkoutUrl: string }>('/coin/purchase', {
+      method: 'POST',
+      body: JSON.stringify({ packageType }),
+    });
+  }
+
   // Admin Viewing endpoints
   async getAdminViewings() {
     return this.request<{ viewings: AdminViewingDTO[] }>('/admin/viewings');

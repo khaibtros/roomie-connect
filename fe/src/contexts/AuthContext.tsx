@@ -20,6 +20,7 @@ interface User {
   isVerified?: boolean;
   created_at?: string;
   aud?: string;
+  knockCoin?: number;
 }
 
 interface AuthContextType {

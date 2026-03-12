@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Building2, Users, MessageCircle, User, Bell, LogOut, LogIn } from 'lucide-react';
+import { Home, Building2, Users, MessageCircle, User, Bell, LogOut, LogIn, Coins } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -70,8 +70,16 @@ export function Navbar() {
                     <Button variant="ghost" size="icon" className="rounded-full">
                       <Bell className="h-5 w-5" />
                     </Button>
+                    {(user?.role === 'tenant' || !user?.role) && (
+                      <Link to="/tenant/ai-payment">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 ml-2 bg-yellow-500/10 text-yellow-600 rounded-full font-medium hover:bg-yellow-500/20 transition-all cursor-pointer">
+                          <Coins className="h-4 w-4" />
+                          <span>{user?.knockCoin || 0}</span>
+                        </div>
+                      </Link>
+                    )}
                     <Link to="/profile">
-                      <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center hover:shadow-lg transition-shadow">
+                      <div className="h-9 w-9 ml-2 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center hover:shadow-lg transition-shadow">
                         <User className="h-5 w-5 text-primary-foreground" />
                       </div>
                     </Link>

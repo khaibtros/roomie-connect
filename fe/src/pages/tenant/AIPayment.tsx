@@ -16,6 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { apiClient } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 
 interface AIPackage {
   id: string;
@@ -36,45 +39,39 @@ interface PaymentMethod {
 
 const AI_PACKAGES: AIPackage[] = [
   {
-    id: "free",
-    name: "Free",
-    description: "Tính năng cơ bản",
-    price: 0,
-    monthlyCredit: 0,
+    id: "basic",
+    name: "Gói Basic",
+    description: "Nhận 200 Knock Coin",
+    price: 49000,
+    monthlyCredit: 200,
     features: [
-      "Tìm kiếm và lọc cơ bản",
-      "Truy cập ưu tiên vào danh sách mới",
-      "Trò chuyện AI giới hạn hàng ngày",
-      "Tương thích tìm kiếm bạn phòng (2 lần/ngày)",
+      "Giao dịch nhanh chóng",
+      "Thanh toán an toàn",
     ],
   },
   {
-    id: "aiplus",
-    name: "AI Plus - 1 Tháng",
-    description: "Dùng thử AI không giới hạn",
-    price: 49000,
-    monthlyCredit: 30,
+    id: "standard",
+    name: "Gói Standard",
+    description: "Nhận 450 Knock Coin",
+    price: 99000,
+    monthlyCredit: 450,
     features: [
-      "Tìm kiếm và lọc cơ bản",
-      "Truy cập ưu tiên vào danh sách mới",
-      "Trò chuyện AI không giới hạn",
-      "Tương thích tìm kiếm bạn phòng (3 lần/ngày)",
-      "Lịch sử giá cho thuê",
+      "Tiết kiệm hơn",
+      "Giao dịch nhanh chóng",
+      "Thanh toán an toàn",
     ],
     popular: true,
   },
   {
-    id: "aipro",
-    name: "AI Pro - 3 Tháng",
-    description: "Tính năng nâng cao đầy đủ",
-    price: 129000,
-    monthlyCredit: 90,
+    id: "premium",
+    name: "Gói Premium",
+    description: "Nhận 1000 Knock Coin",
+    price: 199000,
+    monthlyCredit: 1000,
     features: [
-      "Tìm kiếm và lọc cơ bản",
-      "Truy cập ưu tiên vào danh sách mới",
-      "Trò chuyện AI không giới hạn + Tính năng nâng cao",
-      "Tương thích tìm kiếm bạn phòng không giới hạn",
-      "Lịch sử giá cho thuê",
+      "Giá ưu đãi tốt nhất",
+      "Giao dịch trực tiếp",
+      "Thanh toán an toàn",
     ],
   },
 ];
@@ -102,8 +99,24 @@ const PAYMENT_METHODS: PaymentMethod[] = [
 
 export default function AIPayment() {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
+  
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("status");
+    if (status === "success") {
+      toast.success("Thanh toán thành công! Giao dịch đang được xử lý.");
+      // Refresh user to get new coin balance
+      refreshUser();
+      // Remove query param
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (status === "cancel") {
+      toast.error("Bạn đã hủy thanh toán.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [refreshUser]);
 
-  const [selectedPackage, setSelectedPackage] = useState<string>("aiplus");
+  const [selectedPackage, setSelectedPackage] = useState<string>("standard");
   const [selectedPayment, setSelectedPayment] = useState<string>("credit_card");
   const [isProcessing, setIsProcessing] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
@@ -118,22 +131,14 @@ export default function AIPayment() {
 
     setIsProcessing(true);
     try {
-      // TODO: Implement actual payment gateway integration
-      // For now, simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      toast.success(`Chuyển hướng tới cổng thanh toán ${selectedPackage}...`);
-
-      // In real implementation, redirect to payment gateway
-      // window.location.href = `/payment/process?package=${selectedPackage}&method=${selectedPayment}`;
-
-      // For demo, navigate to success page
-      setTimeout(() => {
-        navigate("/tenant/ai-chat");
-        toast.success(
-          `Nâng cấp lên ${currentPackage.name} thành công! Bạn có thêm ${currentPackage.monthlyCredit} tin nhắn.`
-        );
-      }, 1000);
+      const { data, error } = await apiClient.purchaseCoins(selectedPackage);
+      if (error || !data) {
+        toast.error(error || "Không thể tạo liên kết thanh toán");
+        return;
+      }
+      
+      toast.success(`Chuyển hướng tới PayOS...`);
+      window.location.href = data.checkoutUrl;
     } catch (error) {
       console.error("Payment error:", error);
       toast.error("Không thể xử lý thanh toán. Vui lòng thử lại.");
@@ -154,10 +159,10 @@ export default function AIPayment() {
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-2">
             <Zap className="h-6 w-6 text-accent" />
-            <h1 className="text-3xl font-bold">AI Assistant Packages</h1>
+            <h1 className="text-3xl font-bold">Nạp Knock Coin</h1>
           </div>
           <p className="text-muted-foreground">
-            Chọn gói dịch vụ AI phù hợp với nhu cầu của bạn
+            Chọn gói nạp Coin để mở khóa thêm nhiều tính năng kết nối
           </p>
         </div>
 
@@ -290,9 +295,9 @@ export default function AIPayment() {
                   <span className="font-semibold">{currentPackage.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tin nhắn/tháng</span>
+                  <span className="text-muted-foreground">Knock Coin nhận được</span>
                   <span className="font-semibold">
-                    {currentPackage.monthlyCredit}
+                    {currentPackage.monthlyCredit} Coin
                   </span>
                 </div>
                 <div className="flex justify-between">
