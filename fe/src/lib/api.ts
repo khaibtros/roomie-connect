@@ -496,6 +496,8 @@ class ApiClient {
       `/landlord/viewings/${id}/refund`,
       { method: 'POST' },
     );
+  }
+
   // Knock Coin endpoints
   async getCoinPackages() {
     return this.request<{ packages: any[] }>('/coin/packages');
