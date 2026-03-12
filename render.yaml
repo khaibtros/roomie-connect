@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: roomie-connect-backend
+    env: node
+    rootDir: be
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x
+      - key: PORT
+        value: 5000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

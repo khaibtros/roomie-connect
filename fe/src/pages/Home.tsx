@@ -99,6 +99,8 @@ export default function Home() {
                 <ArrowRight className="h-5 w-5 text-muted-foreground" />
               </div>
             </motion.div>
+
+
           </div>
 
           {/* Quick Stats */}

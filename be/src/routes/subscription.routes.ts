@@ -3,6 +3,7 @@ import {
   getCurrentSubscription,
   subscribe,
   getPackages,
+  handlePayOSWebhook,
 } from "./subscription.controller";
 import { authMiddleware } from "../middleware/auth.middleware";
 
@@ -16,5 +17,8 @@ router.get("/current", authMiddleware, getCurrentSubscription);
 
 // POST /api/subscription/subscribe - Subscribe to package
 router.post("/subscribe", authMiddleware, subscribe);
+
+// POST /api/subscription/payos-webhook - Verify and Handle PayOS payment status
+router.post("/payos-webhook", handlePayOSWebhook);
 
 export default router;
