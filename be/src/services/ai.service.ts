@@ -1,4 +1,4 @@
-import http from "http";
+import http, { IncomingMessage } from "http";
 import https from "https";
 import { Room, IRoom } from "../models/Room";
 import { RoommateProfile, IRoommateProfile } from "../models/RoommateProfile";
@@ -246,7 +246,7 @@ function callGeminiLLM(prompt: string): Promise<string> {
           "Content-Length": Buffer.byteLength(payload),
         },
       },
-      (res) => {
+      (res: IncomingMessage) => {
         const chunks: Buffer[] = [];
         res.on("data", (chunk: Buffer) => chunks.push(chunk));
         res.on("end", () => {
@@ -300,7 +300,7 @@ function callGeminiLLM(prompt: string): Promise<string> {
       },
     );
 
-    req.on("error", (err) => {
+    req.on("error", (err: Error) => {
       console.error(`[LLM] Gemini connection error: ${(err as Error).message}`);
       reject(err);
     });
@@ -356,7 +356,7 @@ export function callLocalLLM(prompt: string): Promise<string> {
           "Content-Length": Buffer.byteLength(payload),
         },
       },
-      (res) => {
+      (res: IncomingMessage) => {
         const chunks: Buffer[] = [];
         res.on("data", (chunk: Buffer) => chunks.push(chunk));
         res.on("end", () => {
@@ -393,7 +393,7 @@ export function callLocalLLM(prompt: string): Promise<string> {
       },
     );
 
-    req.on("error", (err) => {
+    req.on("error", (err: Error) => {
       console.error(`[LLM] Connection error: ${(err as Error).message}`);
       reject(err);
     });

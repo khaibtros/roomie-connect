@@ -1,4 +1,4 @@
-import { Router, Response } from "express";
+import { Router, Request, Response } from "express";
 import mongoose from "mongoose";
 import { RoommateProfile, User } from "../models";
 import { authMiddleware, AuthRequest } from "../middleware/auth.middleware";
@@ -8,7 +8,7 @@ const router = Router();
 const UNLOCK_COST_KNOCK_COIN = 50;
 
 // GET /api/roommates - List public roommate profiles
-router.get("/", async (req, res: Response) => {
+router.get("/", async (req: Request, res: Response) => {
   try {
     const { university, page = 1, limit = 20 } = req.query;
 
@@ -212,7 +212,7 @@ router.post(
 );
 
 // GET /api/roommates/:id - Get specific profile
-router.get("/:id", async (req, res: Response) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
     const profile = await RoommateProfile.findById(req.params.id).populate(
       "userId",
