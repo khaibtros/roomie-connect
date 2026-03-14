@@ -198,7 +198,10 @@ function MatchCard({
               <Button
                 type="button"
                 className="rounded-full"
-                onClick={onUnlock}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUnlock?.();
+                }}
                 disabled={unlocking}
               >
                 {unlocking ? "Đang mở..." : "Mở khóa"}
@@ -340,6 +343,7 @@ export default function Matches() {
       setLoginOpen(true);
       return;
     }
+    if (unlockingId === targetUserId) return;
     if (isUnlocked(targetUserId)) return;
 
     if ((coinBalance ?? 0) < 50) {
@@ -383,7 +387,7 @@ export default function Matches() {
         {/* Header */}
         <div className="flex items-center gap-4">
           <Link
-            to="/quiz"
+            to="/find-roommate"
             className="p-2 rounded-full hover:bg-muted transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />

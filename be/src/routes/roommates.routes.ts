@@ -88,7 +88,11 @@ router.post(
       }
 
       const updated = await User.findOneAndUpdate(
-        { _id: req.userId, knockCoin: { $gte: UNLOCK_COST_KNOCK_COIN } },
+        {
+          _id: req.userId,
+          knockCoin: { $gte: UNLOCK_COST_KNOCK_COIN },
+          unlockedRoommateUserIds: { $ne: targetUserId },
+        },
         {
           $inc: { knockCoin: -UNLOCK_COST_KNOCK_COIN },
           $addToSet: { unlockedRoommateUserIds: targetUserId },
