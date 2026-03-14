@@ -3,8 +3,11 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// Support both keys to avoid deployment misconfig (Render templates often use MONGO_URI).
 const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/roomie-connect";
+  process.env.MONGODB_URI ||
+  process.env.MONGO_URI ||
+  "mongodb://localhost:27017/roomie-connect";
 
 export const connectDatabase = async (): Promise<void> => {
   try {

@@ -143,7 +143,7 @@ export async function handleChat(
     }
 
     const FREE_CHAT_LIMIT = 2;
-    const COIN_COST = 5;
+    const COIN_COST = 50;
     const isFree = (user.aiFreeChatUsed ?? 0) < FREE_CHAT_LIMIT;
     const cost = isFree ? 0 : COIN_COST;
 

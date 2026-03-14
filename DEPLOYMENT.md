@@ -38,6 +38,9 @@ We have provided a `render.yaml` file in the root directory which serves as a bl
    - `MONGO_URI`: Your MongoDB connection string
    - `JWT_SECRET`: A random string for token generation
    - `PORT`: `5000`
+   - `AI_PROVIDER`: `gemini`
+   - `GEMINI_API_KEY`: Your Gemini API key (keep it secret; do not commit to git)
+   - `GEMINI_MODEL`: (optional) default `gemini-2.5-flash`
 5. Click **Create Web Service**.
 
 ---

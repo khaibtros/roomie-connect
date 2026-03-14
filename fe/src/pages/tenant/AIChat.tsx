@@ -109,7 +109,7 @@ const WELCOME_MESSAGE: ChatMessage = {
   id: "welcome",
   role: "bot",
   content:
-    'Xin chào! Tôi là **KnockBot** — trợ lý AI của KnockKnock.\n\nTôi có thể giúp bạn:\n•  **Tìm phòng**: "Tìm phòng dưới 3 triệu ở Hòa Lạc"\n•  **Tìm bạn cùng phòng**: "Tìm bạn phòng ngủ sớm, không hút thuốc,.. "\n\n**Lưu ý**: Bạn có 2 tin nhắn miễn phí ban đầu. Sau đó, mỗi tin nhắn sẽ tốn 5 KnockCoin.',
+    'Xin chào! Tôi là **KnockBot** — trợ lý AI của KnockKnock.\n\nTôi có thể giúp bạn:\n•  **Tìm phòng**: "Tìm phòng dưới 3 triệu ở Hòa Lạc"\n•  **Tìm bạn cùng phòng**: "Tìm bạn phòng ngủ sớm, không hút thuốc,.. "\n\n**Lưu ý**: Bạn có 2 tin nhắn miễn phí ban đầu. Sau đó, mỗi tin nhắn sẽ tốn 50 KnockCoin.',
   timestamp: new Date(),
 };
 
@@ -232,7 +232,7 @@ export default function TenantAIChat() {
     const freeChatUsed = user?.aiFreeChatUsed ?? 0;
     const FREE_CHAT_LIMIT = 2;
     const hasFreeChats = freeChatUsed < FREE_CHAT_LIMIT;
-    if (!hasFreeChats && knockCoin < 5) {
+    if (!hasFreeChats && knockCoin < 50) {
       toast.error(
         "Bạn đã hết lượt miễn phí và không đủ KnockCoin. Vui lòng nạp thêm.",
       );
@@ -398,7 +398,7 @@ export default function TenantAIChat() {
 
   // Use persistent backend counter for accurate out-of-coins detection
   const freeChatUsed = user?.aiFreeChatUsed ?? 0;
-  const isOutofCoins = !isHistoryLoading && freeChatUsed >= 2 && knockCoin < 5;
+  const isOutofCoins = !isHistoryLoading && freeChatUsed >= 2 && knockCoin < 50;
 
   return (
     <Layout>
@@ -433,7 +433,7 @@ export default function TenantAIChat() {
           <div className="flex items-center gap-2">
             <Badge
               variant={
-                knockCoin >= 5
+                knockCoin >= 50
                   ? "default"
                   : knockCoin > 0
                     ? "secondary"

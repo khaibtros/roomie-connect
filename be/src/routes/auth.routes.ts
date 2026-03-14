@@ -114,6 +114,8 @@ router.post("/register", async (req: Request, res: Response) => {
         email: savedUser.email,
         fullName: savedUser.fullName,
         role: savedUser.role,
+        knockCoin: savedUser.knockCoin ?? 0,
+        aiTokens: savedUser.aiTokens,
       },
     });
   } catch (error) {
@@ -185,6 +187,9 @@ router.post("/login", async (req: Request, res: Response) => {
         bankAccount: user.bankAccount,
         role: user.role,
         isVerified: user.isVerified,
+        knockCoin: user.knockCoin ?? 0,
+        aiTokens: user.aiTokens,
+        aiFreeChatUsed: user.aiFreeChatUsed ?? 0,
       },
     });
   } catch (error) {

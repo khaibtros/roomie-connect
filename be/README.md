@@ -9,7 +9,7 @@ Backend API server cho ứng dụng **KnockKnock** — nền tảng tìm phòng 
 - **Framework**: Express.js
 - **Database**: MongoDB (Mongoose ODM)
 - **Authentication**: JWT (jsonwebtoken) + bcryptjs
-- **AI**: qwen2:1.5b 
+- **AI**: Gemini API (default) or Ollama (optional)
 - **Dev Tools**: ts-node-dev (hot reload)
 
 ## Cách chạy
@@ -27,9 +27,20 @@ Tạo file `.env` trong thư mục `be/`:
 
 ```env
 PORT=5000
+# You can use either MONGODB_URI or MONGO_URI
 MONGODB_URI=mongodb://localhost:27017/roomie-connect
 JWT_SECRET=your-secret-key
 FRONTEND_URL=http://localhost:5173
+
+# AI provider (default: gemini)
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-2.5-flash
+
+# If you want to use Ollama instead:
+# AI_PROVIDER=ollama
+# OLLAMA_URL=http://localhost:11434
+# OLLAMA_MODEL=qwen2.5:7b-instruct
 ```
 
 ### 3. Khởi động MongoDB
