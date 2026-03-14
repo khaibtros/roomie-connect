@@ -1,4 +1,5 @@
 import http from "http";
+import https from "https";
 import { Room, IRoom } from "../models/Room";
 import { RoommateProfile, IRoommateProfile } from "../models/RoommateProfile";
 import { parseBudget } from "./budget.parser";
@@ -190,8 +191,123 @@ export async function queryRoommates(
 }
 
 // ---------------------------------------------------------------------------
-// Local LLM Call (Ollama)
+// LLM Call (Gemini or Ollama)
 // ---------------------------------------------------------------------------
+
+type AIProvider = "gemini" | "ollama";
+
+function getAIProvider(): AIProvider {
+  const raw = (process.env.AI_PROVIDER || "gemini").toLowerCase().trim();
+  return raw === "ollama" ? "ollama" : "gemini";
+}
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+
+function callGeminiLLM(prompt: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!GEMINI_API_KEY) {
+      reject(new Error("Missing GEMINI_API_KEY"));
+      return;
+    }
+
+    const url = new URL(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+        GEMINI_MODEL,
+      )}:generateContent`,
+    );
+    url.searchParams.set("key", GEMINI_API_KEY);
+
+    const payload = JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.4,
+        topP: 0.9,
+        maxOutputTokens: 400,
+      },
+    });
+
+    console.log(`[LLM] provider=gemini model=${GEMINI_MODEL}`);
+
+    const req = https.request(
+      {
+        hostname: url.hostname,
+        port: 443,
+        path: `${url.pathname}${url.search}`,
+        method: "POST",
+        timeout: 12000,
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(payload),
+        },
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk: Buffer) => chunks.push(chunk));
+        res.on("end", () => {
+          const body = Buffer.concat(chunks).toString();
+
+          if (res.statusCode !== 200) {
+            console.error(
+              `[LLM] Gemini non-200 status ${res.statusCode}: ${body.slice(0, 200)}`,
+            );
+            let apiMessage = "";
+            try {
+              const parsed = JSON.parse(body) as any;
+              apiMessage =
+                typeof parsed?.error?.message === "string"
+                  ? (parsed.error.message as string).trim()
+                  : "";
+            } catch {
+              // ignore
+            }
+            reject(
+              new Error(
+                `Gemini returned HTTP ${res.statusCode}${apiMessage ? `: ${apiMessage}` : ""}`,
+              ),
+            );
+            return;
+          }
+
+          let data: any;
+          try {
+            data = JSON.parse(body);
+          } catch {
+            console.error(`[LLM] Gemini invalid JSON: ${body.slice(0, 200)}`);
+            reject(new Error("Gemini returned invalid JSON"));
+            return;
+          }
+
+          const text =
+            data?.candidates?.[0]?.content?.parts?.[0]?.text &&
+            typeof data.candidates[0].content.parts[0].text === "string"
+              ? (data.candidates[0].content.parts[0].text as string).trim()
+              : "";
+
+          if (!text) {
+            console.error(`[LLM] Gemini empty response: ${body.slice(0, 200)}`);
+            reject(new Error("Gemini returned an empty response field"));
+            return;
+          }
+
+          resolve(text);
+        });
+      },
+    );
+
+    req.on("error", (err) => {
+      console.error(`[LLM] Gemini connection error: ${(err as Error).message}`);
+      reject(err);
+    });
+    req.write(payload);
+    req.end();
+  });
+}
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:7b-instruct";
@@ -208,6 +324,11 @@ const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:7b-instruct";
  * - Returned value is always a non-empty string or the promise rejects.
  */
 export function callLocalLLM(prompt: string): Promise<string> {
+  // Default: use Gemini (cloud). Set AI_PROVIDER=ollama to use local Ollama.
+  const provider = getAIProvider();
+  if (provider === "gemini") {
+    return callGeminiLLM(prompt);
+  }
   return new Promise((resolve, reject) => {
     const url = new URL("/api/generate", OLLAMA_BASE_URL);
     const payload = JSON.stringify({

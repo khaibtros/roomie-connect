@@ -69,7 +69,7 @@ export default function FindRoommateChoice() {
                     Bộ câu hỏi trắc nghiệm
                   </h2>
                   <p className="text-muted-foreground">
-                    Sử dụng bộ câu hỏi được biên soạn để tìm roommate phù hợp.
+                    Sử dụng bộ câu hỏi được biên soạn để tìm roommate phù hợp thông qua đặc điểm thói quen sinh hoạt chung.
                   </p>
                 </div>
               </div>
@@ -83,7 +83,7 @@ export default function FindRoommateChoice() {
                   ? "Đang tải..."
                   : hasPreferences
                     ? "Xem kết quả Match"
-                    : "Trả lời bộ câu hỏi"}
+                    : "Trả lời bộ câu hỏi ngay!"}
               </Button>
             </div>
           </div>
