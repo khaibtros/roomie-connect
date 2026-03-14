@@ -63,7 +63,9 @@ export const purchaseCoins = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Invalid package type' });
     }
 
-    const orderCode = Number(String(Date.now()).slice(-6));
+    // Generate unique orderCode (max 10 digits for safety and PayOS limits)
+    // Using slice(-9) gives us a window of ~31 years before wrap-around in terms of relative uniqueness
+    const orderCode = Number(Date.now().toString().slice(-9));
 
     const pendingTx = new CoinTransaction({
       userId,
@@ -107,21 +109,39 @@ export const handlePayOSWebhook = async (req: Request, res: Response) => {
     // Sandbox webhook trick if verification fails. Standard PayOS webhook code:
     const webhookData = await payos.webhooks.verify(body);
     
-    // Wait to ensure transaction exists
+    // Safety check: ensure we only process successful payments
+    if (webhookData.desc !== 'success' && webhookData.code !== '00') {
+      console.log(`[PayOS Webhook] Payment not successful: code=${webhookData.code}, desc=${webhookData.desc}`);
+      return res.json({ success: true });
+    }
+
+    // Wait slightly to ensure transaction exists in our DB (race condition with create)
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    if (webhookData.desc === 'success' || webhookData.code === '00' || body.success) {
-      const dbTx = await CoinTransaction.findOne({ orderCode: webhookData.orderCode });
-      if (dbTx && dbTx.status === 'pending') {
-        dbTx.status = 'success';
+    const dbTx = await CoinTransaction.findOne({ orderCode: webhookData.orderCode });
+    
+    if (!dbTx) {
+      console.error(`[PayOS Webhook] Transaction not found for orderCode: ${webhookData.orderCode}`);
+      return res.json({ success: true });
+    }
+
+    if (dbTx.status === 'pending') {
+      // CRITICAL: Verify amount matches to prevent 'over-under' payment manipulation
+      if (webhookData.amount !== dbTx.amount) {
+        console.error(`[PayOS Webhook] Amount mismatch! Expected ${dbTx.amount}, got ${webhookData.amount}`);
+        dbTx.status = 'failed';
         await dbTx.save();
-
-        await User.findByIdAndUpdate(dbTx.userId, {
-          $inc: { knockCoin: dbTx.coinAmount }
-        });
-
-        console.log(`[KnockCoin] Successfully added ${dbTx.coinAmount} coins to user ${dbTx.userId}`);
+        return res.json({ success: true });
       }
+
+      dbTx.status = 'success';
+      await dbTx.save();
+
+      await User.findByIdAndUpdate(dbTx.userId, {
+        $inc: { knockCoin: dbTx.coinAmount }
+      });
+
+      console.log(`[KnockCoin] Successfully added ${dbTx.coinAmount} coins to user ${dbTx.userId}`);
     }
 
     res.json({ success: true });
