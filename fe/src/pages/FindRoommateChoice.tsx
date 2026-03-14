@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Bot } from "lucide-react";
+import { Sparkles, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/api";
+import { toast } from "sonner";
 
 export default function FindRoommateChoice() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user, refreshUser } = useAuth();
   const [hasPreferences, setHasPreferences] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [retaking, setRetaking] = useState(false);
 
   useEffect(() => {
     const checkProfile = async () => {
@@ -85,6 +87,58 @@ export default function FindRoommateChoice() {
                     ? "Xem kết quả Match"
                     : "Trả lời bộ câu hỏi ngay!"}
               </Button>
+
+              {hasPreferences && (
+                
+                
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    if ((user?.knockCoin ?? 0) < 50) {
+                      toast.error("Bạn không đủ Knock Coin. Vui lòng nạp thêm!", {
+                        action: {
+                          label: "Nạp ngay",
+                          onClick: () => navigate("/tenant/ai-payment"),
+                        },
+                      });
+                      return;
+                    }
+
+                    setRetaking(true);
+                    try {
+                      const { data, error } = await apiClient.payForQuizRetake();
+                      if (error) {
+                        if (error.includes('HTTP 402') || error.includes('Not enough')) {
+                          toast.error('Bạn không đủ Knock Coin. Hãy nạp thêm để tiếp tục!', {
+                            action: {
+                              label: "Nạp ngay",
+                              onClick: () => navigate("/tenant/ai-payment"),
+                            },
+                          });
+                        } else {
+                          toast.error('Lỗi khi thực hiện giao dịch: ' + error);
+                        }
+                        return;
+                      }
+                      if (data) {
+                        toast.success('Giao dịch thành công! Đang chuyển hướng...');
+                        refreshUser();
+                        setTimeout(() => navigate('/quiz'), 1500);
+                      }
+                    } catch {
+                      toast.error('Có lỗi xảy ra, vui lòng thử lại sau.');
+                    } finally {
+                      setRetaking(false);
+                    }
+                  }}
+                  className="w-full rounded-full h-12 text-lg font-medium mt-3"
+                  size="lg"
+                  disabled={retaking}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  {retaking ? 'Đang xử lý...' : 'Làm lại bài test (50 KnockCoin)'}
+                </Button>
+              )}
             </div>
           </div>
         </div>

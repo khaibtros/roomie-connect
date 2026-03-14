@@ -213,13 +213,13 @@ export default function TenantAIChat() {
   }, [isAuthenticated]);
 
   // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
-
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading, scrollToBottom]);
 
   // ---------------------------------------------------------------------------
   // Send message handler
@@ -369,7 +369,7 @@ export default function TenantAIChat() {
       );
       // Bullet points
       const bulletProcessed = boldProcessed.replace(
-        /^[•\-]\s/,
+       /^[•-]\s+/gm,
         '<span class="text-primary mr-1">•</span>',
       );
 

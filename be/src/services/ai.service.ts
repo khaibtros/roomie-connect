@@ -1,4 +1,4 @@
-import http, { IncomingMessage } from "http";
+import { IncomingMessage } from "http";
 import https from "https";
 import { Room, IRoom } from "../models/Room";
 import { RoommateProfile, IRoommateProfile } from "../models/RoommateProfile";
@@ -191,20 +191,148 @@ export async function queryRoommates(
 }
 
 // ---------------------------------------------------------------------------
-// LLM Call (Gemini or Ollama)
+// LLM Call — Multi-model router: DeepSeek (primary) → Gemini (fallback)
 // ---------------------------------------------------------------------------
 
-type AIProvider = "gemini" | "ollama";
-
-function getAIProvider(): AIProvider {
-  const raw = (process.env.AI_PROVIDER || "gemini").toLowerCase().trim();
-  return raw === "ollama" ? "ollama" : "gemini";
-}
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
+const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
+const DEEPSEEK_TIMEOUT = 15_000;
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const GEMINI_TIMEOUT = 12_000;
 
-function callGeminiLLM(prompt: string): Promise<string> {
+// -- Response types (no `any`) ------------------------------------------------
+
+interface GeminiPart {
+  text?: string;
+}
+interface GeminiContent {
+  parts?: GeminiPart[];
+}
+interface GeminiCandidate {
+  content?: GeminiContent;
+}
+interface GeminiErrorBody {
+  error?: { message?: string };
+}
+interface GeminiResponse {
+  candidates?: GeminiCandidate[];
+}
+
+interface DeepSeekChoice {
+  message?: { content?: string };
+}
+interface DeepSeekErrorBody {
+  error?: { message?: string };
+}
+interface DeepSeekResponse {
+  choices?: DeepSeekChoice[];
+}
+
+// -- DeepSeek -----------------------------------------------------------------
+
+export function callDeepSeek(prompt: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!DEEPSEEK_API_KEY) {
+      reject(new Error("Missing DEEPSEEK_API_KEY"));
+      return;
+    }
+
+    const payload = JSON.stringify({
+      model: DEEPSEEK_MODEL,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.4,
+      max_tokens: 250,
+      top_p: 0.9,
+    });
+
+    console.log(`[LLM] provider=deepseek model=${DEEPSEEK_MODEL}`);
+
+    const req = https.request(
+      {
+        hostname: "api.deepseek.com",
+        port: 443,
+        path: "/v1/chat/completions",
+        method: "POST",
+        timeout: DEEPSEEK_TIMEOUT,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+          "Content-Length": Buffer.byteLength(payload),
+        },
+      },
+      (res: IncomingMessage) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk: Buffer) => chunks.push(chunk));
+        res.on("end", () => {
+          const body = Buffer.concat(chunks).toString();
+
+          if (res.statusCode !== 200) {
+            console.error(
+              `[LLM] DeepSeek non-200 status ${res.statusCode}: ${body.slice(0, 200)}`,
+            );
+            let apiMessage = "";
+            try {
+              const parsed: DeepSeekErrorBody = JSON.parse(body);
+              apiMessage =
+                typeof parsed?.error?.message === "string"
+                  ? parsed.error.message.trim()
+                  : "";
+            } catch {
+              // ignore
+            }
+            reject(
+              new Error(
+                `DeepSeek returned HTTP ${res.statusCode}${apiMessage ? `: ${apiMessage}` : ""}`,
+              ),
+            );
+            return;
+          }
+
+          let data: DeepSeekResponse;
+          try {
+            data = JSON.parse(body) as DeepSeekResponse;
+          } catch {
+            console.error(`[LLM] DeepSeek invalid JSON: ${body.slice(0, 200)}`);
+            reject(new Error("DeepSeek returned invalid JSON"));
+            return;
+          }
+
+          const raw = data?.choices?.[0]?.message?.content;
+          const text = typeof raw === "string" ? raw.trim() : "";
+
+          if (!text) {
+            console.error(`[LLM] DeepSeek empty response: ${body.slice(0, 200)}`);
+            reject(new Error("DeepSeek returned an empty response field"));
+            return;
+          }
+
+          console.log(`[LLM] response received (${text.length} chars)`);
+          resolve(text);
+        });
+      },
+    );
+
+    req.on("timeout", () => {
+      req.destroy();
+      console.error(`[LLM] DeepSeek request timed out after ${DEEPSEEK_TIMEOUT}ms`);
+      reject(new Error(`DeepSeek request timed out after ${DEEPSEEK_TIMEOUT}ms`));
+    });
+
+    req.on("error", (err: Error) => {
+      console.error(`[LLM] DeepSeek connection error: ${err.message}`);
+      reject(err);
+    });
+
+    req.write(payload);
+    req.end();
+  });
+}
+
+// -- Gemini -------------------------------------------------------------------
+
+export function callGemini(prompt: string): Promise<string> {
   return new Promise((resolve, reject) => {
     if (!GEMINI_API_KEY) {
       reject(new Error("Missing GEMINI_API_KEY"));
@@ -228,7 +356,7 @@ function callGeminiLLM(prompt: string): Promise<string> {
       generationConfig: {
         temperature: 0.4,
         topP: 0.9,
-        maxOutputTokens: 400,
+        maxOutputTokens: 200,
       },
     });
 
@@ -240,7 +368,7 @@ function callGeminiLLM(prompt: string): Promise<string> {
         port: 443,
         path: `${url.pathname}${url.search}`,
         method: "POST",
-        timeout: 12000,
+        timeout: GEMINI_TIMEOUT,
         headers: {
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(payload),
@@ -258,10 +386,10 @@ function callGeminiLLM(prompt: string): Promise<string> {
             );
             let apiMessage = "";
             try {
-              const parsed = JSON.parse(body) as any;
+              const parsed: GeminiErrorBody = JSON.parse(body);
               apiMessage =
                 typeof parsed?.error?.message === "string"
-                  ? (parsed.error.message as string).trim()
+                  ? parsed.error.message.trim()
                   : "";
             } catch {
               // ignore
@@ -274,20 +402,17 @@ function callGeminiLLM(prompt: string): Promise<string> {
             return;
           }
 
-          let data: any;
+          let data: GeminiResponse;
           try {
-            data = JSON.parse(body);
+            data = JSON.parse(body) as GeminiResponse;
           } catch {
             console.error(`[LLM] Gemini invalid JSON: ${body.slice(0, 200)}`);
             reject(new Error("Gemini returned invalid JSON"));
             return;
           }
 
-          const text =
-            data?.candidates?.[0]?.content?.parts?.[0]?.text &&
-            typeof data.candidates[0].content.parts[0].text === "string"
-              ? (data.candidates[0].content.parts[0].text as string).trim()
-              : "";
+          const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          const text = typeof raw === "string" ? raw.trim() : "";
 
           if (!text) {
             console.error(`[LLM] Gemini empty response: ${body.slice(0, 200)}`);
@@ -295,109 +420,60 @@ function callGeminiLLM(prompt: string): Promise<string> {
             return;
           }
 
+          console.log(`[LLM] response received (${text.length} chars)`);
           resolve(text);
         });
       },
     );
 
+    req.on("timeout", () => {
+      req.destroy();
+      console.error(`[LLM] Gemini request timed out after ${GEMINI_TIMEOUT}ms`);
+      reject(new Error(`Gemini request timed out after ${GEMINI_TIMEOUT}ms`));
+    });
+
     req.on("error", (err: Error) => {
-      console.error(`[LLM] Gemini connection error: ${(err as Error).message}`);
+      console.error(`[LLM] Gemini connection error: ${err.message}`);
       reject(err);
     });
+
     req.write(payload);
     req.end();
   });
 }
 
-const OLLAMA_BASE_URL = process.env.OLLAMA_URL || "http://localhost:11434";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:7b-instruct";
+// -- Multi-model router: DeepSeek → retry → Gemini fallback ------------------
 
 /**
- * Call the local Ollama LLM via HTTP and return the generated text.
- * Uses Node built-in http — zero extra dependencies.
+ * Primary entry point for LLM calls.
  *
- * Safeguards:
- * - Non-200 HTTP status → explicit error with status code + body snippet.
- * - Malformed JSON → explicit parse error.
- * - Missing or empty `response` field → explicit error (prevents saving undefined
- *   to Mongoose and avoids downstream validation failures).
- * - Returned value is always a non-empty string or the promise rejects.
+ * Flow: DeepSeek → retry DeepSeek once → Gemini fallback.
+ * Throws only when every provider has been exhausted.
  */
-export function callLocalLLM(prompt: string): Promise<string> {
-  // Default: use Gemini (cloud). Set AI_PROVIDER=ollama to use local Ollama.
-  const provider = getAIProvider();
-  if (provider === "gemini") {
-    return callGeminiLLM(prompt);
-  }
-  return new Promise((resolve, reject) => {
-    const url = new URL("/api/generate", OLLAMA_BASE_URL);
-    const payload = JSON.stringify({
-      model: OLLAMA_MODEL,
-      prompt,
-      stream: false,
-      options: {
-        temperature: 0.4,   // ổn định hơn cho hệ thống tìm trọ
-        top_p: 0.9,
-        num_predict: 400,   // giới hạn token output
-      },
-    });
-
-    console.log(`[LLM] Sending request to ${OLLAMA_BASE_URL} model=${OLLAMA_MODEL}`);
-
-    const req = http.request(
-      {
-        hostname: url.hostname,
-        port: url.port,
-        path: url.pathname,
-        method: "POST",
-        timeout: 5000, // safeguard timeout 5s
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(payload),
-        },
-      },
-      (res: IncomingMessage) => {
-        const chunks: Buffer[] = [];
-        res.on("data", (chunk: Buffer) => chunks.push(chunk));
-        res.on("end", () => {
-          const body = Buffer.concat(chunks).toString();
-
-          // Safeguard A1: reject on non-200 HTTP status
-          if (res.statusCode !== 200) {
-            console.error(`[LLM] Non-200 status ${res.statusCode}: ${body.slice(0, 200)}`);
-            reject(new Error(`Ollama returned HTTP ${res.statusCode}`));
-            return;
-          }
-
-          // Safeguard A2: reject on unparseable JSON
-          let data: { response?: unknown };
-          try {
-            data = JSON.parse(body) as { response?: unknown };
-          } catch {
-            console.error(`[LLM] Failed to parse JSON response: ${body.slice(0, 200)}`);
-            reject(new Error("Ollama returned invalid JSON"));
-            return;
-          }
-
-          // Safeguard A3: ensure response field is a non-empty string
-          const text = typeof data.response === "string" ? data.response.trim() : "";
-          if (!text) {
-            console.error(`[LLM] response field missing or empty in: ${body.slice(0, 200)}`);
-            reject(new Error("Ollama returned an empty response field"));
-            return;
-          }
-
-          console.log(`[LLM] Response received (${text.length} chars)`);
-          resolve(text);
-        });
-      },
+export async function callLLM(prompt: string): Promise<string> {
+  // Attempt 1 — DeepSeek
+  try {
+    return await callDeepSeek(prompt);
+  } catch (err) {
+    console.error(
+      `[LLM] DeepSeek attempt 1 failed: ${err instanceof Error ? err.message : String(err)}`,
     );
+  }
 
-    req.on("error", (err: Error) => {
-      console.error(`[LLM] Connection error: ${(err as Error).message}`);
-      reject(err);
-    });
-    req.write(payload);
-    req.end();
-  });
+  // Attempt 2 — DeepSeek retry
+  console.log("[LLM] retrying DeepSeek");
+  try {
+    return await callDeepSeek(prompt);
+  } catch (err) {
+    console.error(
+      `[LLM] DeepSeek attempt 2 failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
+  // Attempt 3 — Gemini fallback
+  console.log("[LLM] fallback to Gemini");
+  return callGemini(prompt);
 }
+
+/** @deprecated Use {@link callLLM} instead. Kept for backward compatibility. */
+export const callLocalLLM = callLLM;
