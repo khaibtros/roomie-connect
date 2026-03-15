@@ -19,14 +19,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
-
-interface Room {
-  id: string;
-  title: string;
-  price: number;
-  status: string;
-  created_at: string;
-}
+import { mapApiRoomToRoom, type LandlordRoom } from "@/utils/mappers/roomMapper";
 
 interface WalletData {
   balance: number;
@@ -37,7 +30,7 @@ export default function LandlordDashboard() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [walletBalance, setWalletBalance] = useState(0);
-  const [recentPosts, setRecentPosts] = useState<Room[]>([]);
+  const [recentPosts, setRecentPosts] = useState<LandlordRoom[]>([]);
   const [stats, setStats] = useState({
     totalPosts: 0,
     activePosts: 0,
@@ -66,12 +59,14 @@ export default function LandlordDashboard() {
       const { data: roomsData, error: roomsError } = await apiClient.getMyRooms();
 
       if (!roomsError && roomsData?.rooms) {
-        setRecentPosts(roomsData.rooms.slice(0, 4));
+        const rooms: LandlordRoom[] = roomsData.rooms.map(mapApiRoomToRoom);
+
+        setRecentPosts(rooms.slice(0, 4));
 
         setStats({
-          totalPosts: roomsData.rooms.length,
-          activePosts: roomsData.rooms.filter((r) => r.status === "active").length,
-          pendingPosts: roomsData.rooms.filter((r) => r.status === "pending").length,
+          totalPosts: rooms.length,
+          activePosts: rooms.filter((r) => r.status === "active").length,
+          pendingPosts: rooms.filter((r) => r.status === "pending").length,
           totalViews: Math.floor(Math.random() * 10000) + 5000, // Mock for now
         });
       }

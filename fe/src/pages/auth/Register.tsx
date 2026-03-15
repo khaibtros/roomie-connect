@@ -85,6 +85,10 @@ export default function Register() {
   const Icon = config.icon;
 
   useEffect(() => {
+    if (role === 'admin') {
+      navigate('/auth/login?role=admin', { replace: true });
+      return;
+    }
     if (!loading && user && userRole) {
       if (userRole === 'admin') {
         navigate('/admin/dashboard');
@@ -94,7 +98,7 @@ export default function Register() {
         navigate('/tenant/find-room');
       }
     }
-  }, [user, userRole, loading, navigate]);
+  }, [role, user, userRole, loading, navigate]);
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

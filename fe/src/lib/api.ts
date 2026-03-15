@@ -382,6 +382,7 @@ class ApiClient {
       error?: string;
       rooms?: Record<string, unknown>[];         // populated on room-search queries
       roommates?: Record<string, unknown>[];     // populated on roommate-search queries
+      compareResults?: Record<string, unknown>[];// populated on compare-rooms queries
       tokensRemaining?: number;                  // updated balance after deduction
     }>('/ai/chat', {
       method: 'POST',

@@ -167,6 +167,7 @@ export function AvatarUpload({
         />
 
         <Button
+          type="button"
           variant="outline"
           size="sm"
           className="w-full"

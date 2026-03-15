@@ -17,7 +17,17 @@ import {
   buildRoommatePrompt,
   buildSmallTalkPrompt,
   buildGeneralQAPrompt,
+  buildComparisonPrompt,
 } from "../services/prompt.factory";
+import {
+  extractRoomReferencesFromMessage,
+  getContextRoomsFromHistory,
+  resolveRoomsForComparison,
+  buildRoomComparisonPayload,
+  MIN_COMPARE_ROOMS,
+  MAX_COMPARE_ROOMS,
+  type RoomComparisonData,
+} from "../services/compare.service";
 import { classifyIntent, Intent } from "../services/intent.service";
 import {
   resolveSupportedLocations,
@@ -98,6 +108,7 @@ export async function handleChat(
   let reply = "";
   let rooms: IRoom[] = [];
   let roommates: IRoommateProfile[] = [];
+  let compareRooms: RoomComparisonData[] = [];
   const memoryUpdates: MemoryUpdate = {};
   // user is set after DB lookup; we need it in the final block
   let user: HydratedDocument<IUser> | null = null;
@@ -249,7 +260,39 @@ export async function handleChat(
           }
         }
 
-        // ──────────────────────────── SMALL_TALK ────────────────────────
+        // ─────────────────────── COMPARE_ROOMS ──────────────────
+      } else if (detectedIntent === "COMPARE_ROOMS") {
+        const refs = extractRoomReferencesFromMessage(sanitized);
+        const contextIds = await getContextRoomsFromHistory(userId);
+
+        console.log(
+          `[KnockBot] compare_rooms — refs=${JSON.stringify(refs)} contextIds=${JSON.stringify(contextIds.slice(0, MAX_COMPARE_ROOMS))}`,
+        );
+
+        const resolvedRooms = await resolveRoomsForComparison(refs, contextIds);
+
+        console.log(
+          `[KnockBot] compare_rooms — resolved ${resolvedRooms.length} room(s)`,
+        );
+
+        if (resolvedRooms.length < MIN_COMPARE_ROOMS) {
+          reply =
+            "Mình cần ít nhất 2 phòng để có thể so sánh. " +
+            "Bạn có thể cho mình biết rõ tên hoặc ID của các phòng muốn so sánh không? " +
+            "Hoặc bạn có thể tìm phòng trước, rồi mình sẽ giúp so sánh nhé!";
+          responseType = ResponseType.CLARIFICATION;
+        } else {
+          compareRooms = buildRoomComparisonPayload(resolvedRooms);
+          rooms = resolvedRooms;
+          hasResults = true;
+          llmUsed = true;
+          reply = await callLocalLLM(
+            buildComparisonPrompt(compareRooms, sanitized),
+          );
+          responseType = ResponseType.DB_SUCCESS;
+        }
+
+        // ─────────────────────── SMALL_TALK ────────────────────
       } else if (detectedIntent === "SMALL_TALK") {
         llmUsed = true;
         reply = await callLocalLLM(buildSmallTalkPrompt(sanitized));
@@ -334,6 +377,9 @@ export async function handleChat(
         responseType,
         roomResults: rooms.length > 0 ? rooms : undefined,
         roommateResults: roommates.length > 0 ? roommates : undefined,
+        compareResults: compareRooms.length > 0
+          ? (compareRooms as unknown as Record<string, unknown>[])
+          : undefined,
       });
 
       // Update memory (fire-and-forget, only relevant for room/roommate intents)
@@ -360,6 +406,7 @@ export async function handleChat(
       data: reply,
       rooms,
       roommates,
+      compareResults: compareRooms.length > 0 ? compareRooms : undefined,
       responseType,
       tokensRemaining: user.knockCoin,
     });

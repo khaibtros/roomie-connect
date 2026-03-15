@@ -18,6 +18,7 @@
 
 import { IRoom } from "../models/Room";
 import { IRoommateProfile } from "../models/RoommateProfile";
+import type { RoomComparisonData } from "./compare.service";
 
 // ---------------------------------------------------------------------------
 // SMALL_TALK — Zero memory injection
@@ -209,5 +210,78 @@ export function buildRoommatePrompt(profiles: IRoommateProfile[], userMessage: s
     `Yêu cầu người dùng: "${userMessage}"`,
     "",
     "Hãy giới thiệu những người phù hợp bằng tiếng Việt, thân thiện, ngắn gọn. Với mỗi người, hãy nêu rõ vì sao họ phù hợp với yêu cầu.",
+  ].join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// COMPARE_ROOMS — structured comparison context injection
+// ---------------------------------------------------------------------------
+
+/**
+ * Prompt for room comparison. Receives the normalised comparison payload.
+ *
+ * The structured data block tells the model EXACTLY what to compare.
+ * Hard rules prevent hallucination and enforce data-grounded conclusions.
+ *
+ * Format contract the model must follow:
+ *   • Short intro line
+ *   • Per-room criterion breakdown
+ *   • "Nhận xét nhanh" section
+ *   • "Gợi ý lựa chọn" section tailored to common needs
+ */
+export function buildComparisonPrompt(
+  rooms: RoomComparisonData[],
+  userMessage: string,
+): string {
+  const roomBlock = rooms
+    .map((r, i) => {
+      const lines: string[] = [
+        `[Phòng ${i + 1}] ${r.title}`,
+        `  Giá thuê: ${(r.price / 1_000_000).toFixed(1)} triệu/tháng`,
+      ];
+
+      if (r.area !== null) lines.push(`  Diện tích: ${r.area} m²`);
+      if (r.deposit !== null)
+        lines.push(`  Tiền cọc: ${(r.deposit / 1_000_000).toFixed(1)} triệu`);
+      lines.push(`  Sức chứa: ${r.capacity} người`);
+      lines.push(`  Địa chỉ: ${r.address}, ${r.district}`);
+
+      if (r.electricityPrice !== null)
+        lines.push(`  Giá điện: ${r.electricityPrice.toLocaleString("vi-VN")}đ/kWh`);
+      if (r.waterPrice !== null)
+        lines.push(`  Giá nước: ${r.waterPrice.toLocaleString("vi-VN")}đ/m³`);
+      if (r.internetPrice !== null)
+        lines.push(`  Internet: ${r.internetPrice.toLocaleString("vi-VN")}đ/tháng`);
+
+      if (r.amenities.length > 0)
+        lines.push(`  Tiện ích: ${r.amenities.join(", ")}`);
+      else
+        lines.push("  Tiện ích: (chưa có thông tin)");
+
+      return lines.join("\n");
+    })
+    .join("\n\n");
+
+  return [
+    "Bạn là trợ lý AI tên KnockBot của nền tảng KnockKnock.",
+    `Người dùng yêu cầu so sánh ${rooms.length} phòng trọ sau (dữ liệu thực từ cơ sở dữ liệu):`,
+    "",
+    roomBlock,
+    "",
+    "QUY TẮC BẮT BUỘC:",
+    "- CHỈ sử dụng thông tin trong dữ liệu trên. KHÔNG bịa ra bất kỳ thông tin nào.",
+    "- Nếu một tiêu chí không có dữ liệu, ghi rõ 'chưa có thông tin' — không đoán.",
+    "- So sánh trực tiếp và cụ thể: nêu con số thực tế (giá, diện tích, ...).",
+    "- Nêu ưu và nhược điểm thực tế của từng phòng.",
+    "- Kết luận gợi ý theo từng nhu cầu: tiết kiệm chi phí, ưu tiên diện tích, tiện nghi, vị trí.",
+    "- Trả lời bằng tiếng Việt, thân thiện, rõ ràng, dễ đọc.",
+    "",
+    "YÊU CẦU FORMAT trả lời:",
+    "1. Mở đầu ngắn (1 câu)",
+    "2. So sánh từng tiêu chí chính: giá, diện tích, tiền cọc, sức chứa, tiện ích",
+    "3. Nhận xét nhanh: ưu/nhược của từng phòng (2–3 dòng mỗi phòng)",
+    "4. Gợi ý lựa chọn: nên chọn phòng nào nếu ưu tiên tiết kiệm / tiện nghi / không gian / vị trí",
+    "",
+    `Yêu cầu người dùng: "${userMessage}"`,
   ].join("\n");
 }

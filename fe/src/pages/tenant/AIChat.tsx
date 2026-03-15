@@ -40,6 +40,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
+import RoomComparisonCard, {
+  type RoomComparisonData,
+} from "@/components/RoomComparisonCard";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -51,6 +54,7 @@ interface ChatMessage {
   timestamp: Date;
   results?: Record<string, unknown>[]; // room results
   roommates?: Record<string, unknown>[]; // roommate profile results
+  compareResults?: RoomComparisonData[]; // structured comparison payload
   filters?: {
     intent: string;
     max_price: number | null;
@@ -109,7 +113,7 @@ const WELCOME_MESSAGE: ChatMessage = {
   id: "welcome",
   role: "bot",
   content:
-    'Xin chào! Tôi là **KnockBot** — trợ lý AI của KnockKnock.\n\nTôi có thể giúp bạn:\n•  **Tìm phòng**: "Tìm phòng dưới 3 triệu ở Hòa Lạc"\n•  **Tìm bạn cùng phòng**: "Tìm bạn phòng ngủ sớm, không hút thuốc,.. "\n\n**Lưu ý**: Bạn có 2 tin nhắn miễn phí ban đầu. Sau đó, mỗi tin nhắn sẽ tốn 50 KnockCoin.',
+    'Xin chào! Tôi là **KnockBot** — trợ lý AI của KnockKnock.\n\nTôi có thể giúp bạn:\n•  **Tìm phòng**: "Tìm phòng dưới 3 triệu ở Hòa Lạc"\n•  **Tìm bạn cùng phòng**: "Tìm bạn phòng ngủ sớm, không hút thuốc, .."\n•  **So sánh phòng**: "So sánh phòng A và phòng B" hoặc "Phòng nào tốt hơn?"\n\n**Lưu ý**: Bạn có 2 tin nhắn miễn phí ban đầu. Sau đó, mỗi tin nhắn sẽ tốn 50 KnockCoin.',
   timestamp: new Date(),
 };
 
@@ -191,6 +195,10 @@ export default function TenantAIChat() {
             roommates: Array.isArray(item.roommateResults)
               ? item.roommateResults
               : [],
+            // Restore comparison cards
+            compareResults: Array.isArray(item.compareResults)
+              ? (item.compareResults as RoomComparisonData[])
+              : undefined,
           });
         }
       }
@@ -303,6 +311,8 @@ export default function TenantAIChat() {
           results: responseBody.rooms ?? [],
           // Roommate profile cards
           roommates: responseBody.roommates ?? [],
+          // Structured comparison payload (COMPARE_ROOMS intent)
+          compareResults: responseBody.compareResults ?? undefined,
         };
         setMessages((prev) => [...prev, botMsg]);
       }
@@ -501,8 +511,13 @@ export default function TenantAIChat() {
                       : msg.content}
                   </div>
 
-                  {/* Room Result Cards */}
-                  {msg.results && msg.results.length > 0 && (
+                  {/* Comparison Card — rendered when COMPARE_ROOMS intent fires */}
+                  {msg.compareResults && msg.compareResults.length >= 2 && (
+                    <RoomComparisonCard rooms={msg.compareResults} />
+                  )}
+
+                  {/* Room Result Cards — hidden when comparison card is shown */}
+                  {msg.results && msg.results.length > 0 && !msg.compareResults && (
                     <div className="mt-3 space-y-2">
                       {msg.results.map((room) => {
                         const id = room._id as string;

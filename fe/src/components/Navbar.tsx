@@ -27,7 +27,7 @@ export function Navbar() {
     <header className="fixed top-0 left-0 right-0 z-50 hidden md:block">
       <div className="glass-card border-b border-border/50">
         <div className="container flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to={isAuthenticated ? '/home' : '/'} className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-full gradient-bg flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-sm">KK</span>
             </div>

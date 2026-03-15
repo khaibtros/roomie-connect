@@ -234,12 +234,14 @@ export default function Login() {
           </Button>
 
           {/* Register link */}
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            Chưa có tài khoản?{' '}
-            <Link to={`/auth/register?role=${role}`} className="text-primary font-medium hover:underline">
-              Đăng ký ngay
-            </Link>
-          </p>
+          {role !== 'admin' && (
+            <p className="text-center text-sm text-muted-foreground mt-6">
+              Chưa có tài khoản?{' '}
+              <Link to={`/auth/register?role=${role}`} className="text-primary font-medium hover:underline">
+                Đăng ký ngay
+              </Link>
+            </p>
+          )}
 
         </div>
       </motion.div>

@@ -15,6 +15,7 @@
 export type Intent =
   | "FIND_ROOM"
   | "FIND_ROOMMATE"
+  | "COMPARE_ROOMS"
   | "GENERAL_QA"
   | "SMALL_TALK"
   | "UNKNOWN";
@@ -22,6 +23,17 @@ export type Intent =
 // ---------------------------------------------------------------------------
 // Tier 1 — Rule-based patterns
 // ---------------------------------------------------------------------------
+
+/**
+ * COMPARE_ROOMS must be checked BEFORE FIND_ROOM because "so sánh phòng" contains
+ * "phòng" which would otherwise match FIND_ROOM.
+ * ROOMMATE must be checked BEFORE ROOM for the same reason.
+ *
+ * Every pattern is a multi-word phrase. Single words like "ở" or "tìm" are
+ * NEVER used as standalone patterns to prevent false positives.
+ */
+const COMPARE_ROOMS_RULE_RE =
+  /so\s*sánh|đối\s*chiếu|phòng\s*nào\s*(?:tốt|rẻ|đẹp|rộng|tiện|phù\s*hợp)\s*hơn|nên\s*chọn\s*phòng\s*nào|so\s+sánh\s+giữa/i;
 
 /**
  * ROOMMATE must be checked BEFORE ROOM — phrases like "ở ghép", "ghép phòng",
@@ -50,6 +62,7 @@ const SMALL_TALK_RE =
  * Returns null when no pattern fires → caller must escalate to Tier 2.
  */
 export function classifyIntentFast(message: string): Intent | null {
+  if (COMPARE_ROOMS_RULE_RE.test(message)) return "COMPARE_ROOMS";
   if (ROOMMATE_RULE_RE.test(message)) return "FIND_ROOMMATE";
   if (ROOM_RULE_RE.test(message)) return "FIND_ROOM";
   if (SMALL_TALK_RE.test(message)) return "SMALL_TALK";
@@ -63,6 +76,7 @@ export function classifyIntentFast(message: string): Intent | null {
 const VALID_INTENTS: Intent[] = [
   "FIND_ROOM",
   "FIND_ROOMMATE",
+  "COMPARE_ROOMS",
   "GENERAL_QA",
   "SMALL_TALK",
   "UNKNOWN",
@@ -75,7 +89,7 @@ const VALID_INTENTS: Intent[] = [
 function buildClassifierPrompt(message: string): string {
   return [
     "Phân loại tin nhắn sau vào ĐÚNG MỘT nhãn. Chỉ trả lời nhãn, không giải thích.",
-    "Nhãn có thể dùng: FIND_ROOM, FIND_ROOMMATE, GENERAL_QA, SMALL_TALK, UNKNOWN",
+    "Nhãn có thể dùng: FIND_ROOM, FIND_ROOMMATE, COMPARE_ROOMS, GENERAL_QA, SMALL_TALK, UNKNOWN",
     `Tin nhắn: "${message.slice(0, 300)}"`,
     "Nhãn:",
   ].join("\n");
