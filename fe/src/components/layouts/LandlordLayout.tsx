@@ -82,7 +82,7 @@ export default function LandlordLayout({ children }: LandlordLayoutProps) {
       <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex flex-1 flex-col gap-y-4 border-r border-border bg-card px-4 py-6">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 px-4 mb-4">
+          <Link to="/landlord/dashboard" className="flex items-center gap-2 px-4 mb-4">
             <div className="h-10 w-10 rounded-full gradient-bg flex items-center justify-center shadow-card">
               <span className="text-primary-foreground font-bold">KK</span>
             </div>
@@ -131,7 +131,7 @@ export default function LandlordLayout({ children }: LandlordLayoutProps) {
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
               <div className="flex flex-col h-full px-4 py-6">
-                <Link to="/" className="flex items-center gap-2 px-4 mb-6">
+                <Link to="/landlord/dashboard" className="flex items-center gap-2 px-4 mb-6">
                   <div className="h-10 w-10 rounded-full gradient-bg flex items-center justify-center">
                     <span className="text-primary-foreground font-bold">
                       KK

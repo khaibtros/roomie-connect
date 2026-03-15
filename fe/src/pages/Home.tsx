@@ -21,7 +21,7 @@ export default function Home() {
           {/* Greeting */}
           <motion.div variants={fadeUp} className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Chào bạn! 👋</h1>
+              <h1 className="text-2xl font-bold">KnockKnock kính chào bạn! 👋</h1>
               <p className="text-muted-foreground">Hôm nay bạn cần gì?</p>
             </div>
             <button className="relative p-3 rounded-full bg-card shadow-card">

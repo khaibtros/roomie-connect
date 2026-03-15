@@ -19,6 +19,8 @@ export interface IAiUsage extends Document {
   roomResults?: Record<string, unknown>[];
   /** Snapshot of roommate profiles returned for this query */
   roommateResults?: Record<string, unknown>[];
+  /** Structured comparison payload returned for COMPARE_ROOMS intent */
+  compareResults?: Record<string, unknown>[];
   createdAt: Date;
 }
 
@@ -50,6 +52,11 @@ const aiUsageSchema = new Schema<IAiUsage>(
       default: undefined,
     },
     roommateResults: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: undefined,
+    },
+    // Structured comparison payload for COMPARE_ROOMS intent
+    compareResults: {
       type: [mongoose.Schema.Types.Mixed],
       default: undefined,
     },

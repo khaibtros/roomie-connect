@@ -396,6 +396,8 @@ export interface ApiAiUsage {
   responseType?: 'DB' | 'LLM' | 'FALLBACK' | 'OUT_OF_SCOPE' | 'CLARIFICATION' | 'SYSTEM_ERROR';
   roomResults?: Record<string, unknown>[];
   roommateResults?: Record<string, unknown>[];
+  /** Structured comparison payload for COMPARE_ROOMS intent history restore */
+  compareResults?: Record<string, unknown>[];
   createdAt: string;
 }
 
