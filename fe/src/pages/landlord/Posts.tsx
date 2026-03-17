@@ -51,22 +51,11 @@ import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
+import { mapApiRoomToRoom, type LandlordRoom } from '@/utils/mappers/roomMapper';
 
 type RoomStatus = 'pending' | 'active' | 'rejected' | 'expired';
 
-interface Room {
-  id: string;
-  title: string;
-  price: number;
-  district: string;
-  address: string;
-  area: number | null;
-  status: RoomStatus;
-  created_at: string;
-  expires_at: string | null;
-  images: string[] | null;
-  rejection_reason: string | null;
-}
+type Room = LandlordRoom & { status: RoomStatus };
 
 const statusConfig = {
   pending: {
@@ -115,7 +104,8 @@ export default function LandlordPosts() {
       if (error) {
         throw new Error(error);
       }
-      setPosts(data?.rooms || []);
+      const mappedRooms = (data?.rooms || []).map(mapApiRoomToRoom) as Room[];
+      setPosts(mappedRooms);
     } catch (error) {
       console.error('Error fetching posts:', error);
       toast.error('Không thể tải danh sách tin đăng');
@@ -144,11 +134,10 @@ export default function LandlordPosts() {
 
   const handleDuplicate = async (post: Room) => {
     try {
-      const { id, created_at, expires_at, ...postData } = post;
+      const { id, created_at, expires_at, status, rejection_reason, ...postData } = post;
       const { error } = await apiClient.createRoom({
         ...postData,
         title: `${postData.title} (Copy)`,
-        status: 'pending',
       });
 
       if (error) {

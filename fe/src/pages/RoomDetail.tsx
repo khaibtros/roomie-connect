@@ -88,7 +88,7 @@ export default function RoomDetail() {
       
       // Track viewed room after successful load
       if (roomData) {
-        trackViewedRoom(roomData);
+        trackViewedRoom(roomData.id);
       }
     } catch (error) {
       console.error("Error fetching room:", error);

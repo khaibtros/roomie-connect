@@ -562,6 +562,30 @@ class ApiClient {
       };
     }
   }
+
+  async uploadRoomImages(formData: FormData): Promise<{ data: { imageURLs: string[] }; error?: string }> {
+    const headers: HeadersInit = {};
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+    try {
+      const response = await fetch(`${API_BASE_URL}/rooms/upload-images`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return { data: { imageURLs: [] }, error: data.error || `HTTP ${response.status}` };
+      }
+      return { data };
+    } catch (err) {
+      return {
+        data: { imageURLs: [] },
+        error: err instanceof Error ? err.message : 'Network error',
+      };
+    }
+  }
 }
 
 export const apiClient = new ApiClient();

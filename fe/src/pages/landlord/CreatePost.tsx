@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   MapPin,
@@ -11,6 +11,9 @@ import {
   ChevronLeft,
   Upload,
   AlertCircle,
+  Image as ImageIcon,
+  X,
+  Plus,
 } from "lucide-react";
 import {
   Card,
@@ -43,7 +46,8 @@ const steps = [
   { id: 2, title: "Thông tin", icon: Home },
   { id: 3, title: "Chi phí", icon: DollarSign },
   { id: 4, title: "Tiện ích", icon: Zap },
-  { id: 5, title: "Xác nhận", icon: CheckSquare },
+  { id: 5, title: "Hình ảnh", icon: ImageIcon },
+  { id: 6, title: "Xác nhận", icon: CheckSquare },
 ];
 
 const districts = [
@@ -55,53 +59,41 @@ const districts = [
 ];
 
 const amenities = [
-  { id: "elevator", label: "Thang máy" },
-  { id: "fire_safety", label: "PCCC (Phòng cháy chữa cháy)" },
-  { id: "shared_washing", label: "Máy giặt chung" },
-  { id: "private_washing", label: "Máy giặt riêng" },
-  { id: "parking", label: "Chỗ để xe" },
-  { id: "camera", label: "Camera an ninh" },
-  { id: "pet_friendly", label: "Cho nuôi thú cưng" },
-  { id: "shared_owner", label: "Chung chủ" },
-  { id: "drying_area", label: "Khu phơi đồ" },
+  { id: "elevator", label: "Thang máy", field: "has_elevator" },
+  { id: "fire_safety", label: "PCCC (Phòng cháy chữa cháy)", field: "has_fire_safety" },
+  { id: "shared_washing", label: "Máy giặt chung", field: "has_shared_washing" },
+  { id: "private_washing", label: "Máy giặt riêng", field: "has_private_washing" },
+  { id: "parking", label: "Chỗ để xe", field: "has_parking" },
+  { id: "camera", label: "Camera an ninh", field: "has_security_camera" },
+  { id: "pet_friendly", label: "Cho nuôi thú cưng", field: "has_pet_friendly" },
+  { id: "shared_owner", label: "Chung chủ", field: "has_shared_owner" },
+  { id: "drying_area", label: "Khu phơi đồ", field: "has_drying_area" },
 ];
 
 const furniture = [
-  { id: "bed", label: "Giường" },
-  { id: "wardrobe", label: "Tủ quần áo" },
-  { id: "air_conditioner", label: "Điều hoà" },
-  { id: "water_heater", label: "Nóng lạnh" },
-  { id: "kitchen", label: "Bếp / Kệ bếp" },
-  { id: "fridge", label: "Tủ lạnh" },
-  { id: "fully_furnished", label: "Full nội thất" },
+  { id: "bed", label: "Giường", field: "has_bed" },
+  { id: "wardrobe", label: "Tủ quần áo", field: "has_wardrobe" },
+  { id: "air_conditioner", label: "Điều hoà", field: "has_air_conditioner" },
+  { id: "water_heater", label: "Nóng lạnh", field: "has_water_heater" },
+  { id: "kitchen", label: "Bếp / Kệ bếp", field: "has_kitchen" },
+  { id: "fridge", label: "Tủ lạnh", field: "has_fridge" },
+  { id: "fully_furnished", label: "Full nội thất", field: "is_fully_furnished" },
 ];
 
 const POST_FEE = 50000;
 
 export default function CreatePost() {
+  const { id } = useParams();
+  const isEditMode = !!id;
   const navigate = useNavigate();
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [currentStep, setCurrentStep] = useState(1);
-  const [walletBalance, setWalletBalance] = useState(0);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      fetchWalletBalance();
-    }
-  }, [user]);
-
-  const fetchWalletBalance = async () => {
-    try {
-      const { data, error } = await apiClient.getWallet();
-
-      if (!error && data?.wallet) {
-        setWalletBalance(data.wallet.balance);
-      }
-    } catch (error) {
-      console.error("Error fetching wallet balance:", error);
-    }
-  };
+  const [fetchingData, setFetchingData] = useState(isEditMode);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   const [formData, setFormData] = useState({
     // Step 1
@@ -123,8 +115,81 @@ export default function CreatePost() {
     // Step 4
     amenities: [] as string[],
     furniture: [] as string[],
+    // Step 5
     images: [] as string[],
   });
+
+  useEffect(() => {
+    if (user) {
+      fetchSubscriptionStatus();
+      if (isEditMode) {
+        fetchPostData();
+      }
+    }
+  }, [user, id]);
+
+  const fetchSubscriptionStatus = async () => {
+    try {
+      const { data, error } = await apiClient.getCurrentSubscription();
+      if (!error && data?.subscription) {
+        setHasActiveSubscription(data.subscription.status === "active");
+      }
+    } catch (error) {
+      console.error("Error fetching subscription status:", error);
+    }
+  };
+
+  const fetchPostData = async () => {
+    if (!id) return;
+    try {
+      setFetchingData(true);
+      const { data, error } = await apiClient.getRoom(id);
+      if (error) throw new Error(error);
+
+      if (data?.room) {
+        const room = data.room as any;
+        
+        // Map amenities
+        const activeAmenities: string[] = [];
+        amenities.forEach(a => {
+           if (room[a.field]) activeAmenities.push(a.id);
+        });
+
+        // Map furniture
+        const activeFurniture: string[] = [];
+        furniture.forEach(f => {
+           if (room[f.field]) activeFurniture.push(f.id);
+        });
+
+        setFormData({
+          district: room.district || "",
+          address: room.address || "",
+          title: room.title || "",
+          description: room.description || "",
+          price: room.price?.toString() || "",
+          deposit: room.deposit?.toString() || "",
+          area: room.area?.toString() || "",
+          capacity: room.capacity?.toString() || "1",
+          electricity_price: room.electricity_price?.toString() || "3500",
+          water_price: room.water_price?.toString() || "100000",
+          internet_price: room.internet_price?.toString() || "0",
+          cleaning_fee: room.cleaning_fee?.toString() || "0",
+          parking_fee: room.parking_fee?.toString() || "0",
+          amenities: activeAmenities,
+          furniture: activeFurniture,
+          images: room.images || [],
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching post data:", error);
+      toast.error("Không thể tải thông tin tin đăng");
+      navigate("/landlord/posts");
+    } finally {
+      setFetchingData(false);
+    }
+  };
+
+  const postFee = hasActiveSubscription ? 0 : POST_FEE;
 
   const handleChange = (field: string, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -144,6 +209,43 @@ export default function CreatePost() {
     handleChange("furniture", newFurniture);
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const formDataUpload = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formDataUpload.append("images", files[i]);
+    }
+
+    try {
+      setUploadingImages(true);
+      const { data, error } = await apiClient.uploadRoomImages(formDataUpload);
+      if (error) throw new Error(error);
+
+      if (data?.imageURLs) {
+        setFormData(prev => ({
+          ...prev,
+          images: [...prev.images, ...data.imageURLs]
+        }));
+        toast.success(`Đã tải lên ${data.imageURLs.length} ảnh`);
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast.error("Không thể tải ảnh lên. Vui lòng thử lại.");
+    } finally {
+      setUploadingImages(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
   const canProceed = () => {
     switch (currentStep) {
       case 1:
@@ -154,21 +256,17 @@ export default function CreatePost() {
         return true;
       case 4:
         return true;
+      case 5:
+        return formData.images.length > 0;
       default:
         return true;
     }
   };
 
   const handleSubmit = async () => {
-    if (walletBalance < POST_FEE) {
-      toast.error("Số dư không đủ! Vui lòng nạp thêm tiền vào ví.");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      // Create room post using API
       const roomPayload = {
         title: formData.title,
         description: formData.description,
@@ -208,8 +306,14 @@ export default function CreatePost() {
         images: formData.images,
       };
 
-      const { data: roomData, error: roomError } =
-        await apiClient.createRoom(roomPayload);
+      let response;
+      if (isEditMode && id) {
+        response = await apiClient.updateRoom(id, roomPayload);
+      } else {
+        response = await apiClient.createRoom(roomPayload);
+      }
+
+      const { error: roomError } = response;
 
       if (roomError) {
         if (roomError.includes("Active subscription required")) {
@@ -222,24 +326,34 @@ export default function CreatePost() {
         throw new Error(roomError);
       }
 
-      toast.success("Đăng tin thành công! Tin của bạn đang chờ duyệt.");
+      toast.success(isEditMode ? "Cập nhật tin thành công!" : "Đăng tin thành công! Tin của bạn đang chờ duyệt.");
       navigate("/landlord/posts");
     } catch (error) {
-      console.error("Error creating post:", error);
-      toast.error("Không thể đăng tin. Vui lòng thử lại.");
+      console.error("Error submitting post:", error);
+      toast.error(isEditMode ? "Không thể cập nhật tin. Vui lòng thử lại." : "Không thể đăng tin. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetchingData) {
+    return (
+      <LandlordLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </LandlordLayout>
+    );
+  }
 
   return (
     <LandlordLayout>
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold">Đăng tin mới</h1>
+          <h1 className="text-3xl font-bold">{isEditMode ? "Chỉnh sửa tin" : "Đăng tin mới"}</h1>
           <p className="text-muted-foreground mt-1">
-            Điền đầy đủ thông tin để đăng tin cho thuê
+            {isEditMode ? "Cập nhật thông tin phòng trọ của bạn" : "Điền đầy đủ thông tin để đăng tin cho thuê"}
           </p>
         </div>
 
@@ -299,7 +413,8 @@ export default function CreatePost() {
                 {currentStep === 2 && "Mô tả chi tiết về phòng trọ"}
                 {currentStep === 3 && "Thông tin về các loại phí"}
                 {currentStep === 4 && "Chọn tiện ích và nội thất có sẵn"}
-                {currentStep === 5 && "Kiểm tra và xác nhận thông tin"}
+                {currentStep === 5 && "Tải lên hình ảnh thực tế của phòng trọ"}
+                {currentStep === 6 && "Kiểm tra và xác nhận thông tin"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -539,8 +654,75 @@ export default function CreatePost() {
                 </>
               )}
 
-              {/* Step 5: Confirmation */}
+              {/* Step 5: Images */}
               {currentStep === 5 && (
+                <div className="space-y-6">
+                  <div 
+                    className="border-2 border-dashed border-muted-foreground/25 rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      multiple 
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                    />
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                      <Upload className="h-6 w-6 text-primary" />
+                    </div>
+                    <p className="font-medium">Tải ảnh lên</p>
+                    <p className="text-sm text-muted-foreground mt-1">Dung lượng tối đa 10MB mỗi ảnh</p>
+                  </div>
+
+                  {uploadingImages && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-primary animate-pulse">
+                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Đang tải ảnh lên...
+                    </div>
+                  )}
+
+                  {formData.images.length > 0 && (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+                      {formData.images.map((url, index) => (
+                        <div key={index} className="relative aspect-square group">
+                          <img 
+                            src={url} 
+                            alt={`Room image ${index + 1}`} 
+                            className="w-full h-full object-cover rounded-xl border"
+                          />
+                          <button
+                            onClick={() => removeImage(index)}
+                            className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all"
+                      >
+                        <Plus className="h-6 w-6 mb-1" />
+                        <span className="text-xs">Thêm ảnh</span>
+                      </button>
+                    </div>
+                  )}
+                  
+                  {formData.images.length === 0 && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Vui lòng tải lên ít nhất 1 hình ảnh của phòng trọ.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
+
+              {/* Step 6: Confirmation */}
+              {currentStep === 6 && (
                 <>
                   <div className="space-y-4">
                     <div className="p-4 bg-muted rounded-xl space-y-3">
@@ -558,43 +740,26 @@ export default function CreatePost() {
                         <div>{formData.area} m²</div>
                         <div className="text-muted-foreground">Sức chứa:</div>
                         <div>{formData.capacity} người</div>
+                        <div className="text-muted-foreground">Số lượng ảnh:</div>
+                        <div>{formData.images.length} ảnh</div>
                       </div>
                     </div>
 
                     <div className="p-4 bg-muted rounded-xl">
                       <h3 className="font-semibold mb-3">Chi phí đăng tin</h3>
                       <div className="flex justify-between items-center">
-                        <span>Phí đăng tin (30 ngày)</span>
+                        <span>Phí đăng tin</span>
                         <span className="font-semibold text-primary">
-                          {formatCurrency(POST_FEE)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mt-2 pt-2 border-t">
-                        <span>Số dư ví hiện tại</span>
-                        <span className="font-semibold">
-                          {formatCurrency(walletBalance)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mt-2">
-                        <span>Sau khi đăng</span>
-                        <span
-                          className={`font-semibold ${walletBalance - POST_FEE < 0 ? "text-destructive" : "text-emerald-600"}`}
-                        >
-                          {formatCurrency(walletBalance - POST_FEE)}
+                          {hasActiveSubscription ? (
+                            <span className="text-emerald-600">
+                              Miễn phí (Đã đăng ký gói)
+                            </span>
+                          ) : (
+                            "Theo gói"
+                          )}
                         </span>
                       </div>
                     </div>
-
-                    {walletBalance < POST_FEE && (
-                      <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>
-                          Số dư không đủ! Vui lòng nạp thêm{" "}
-                          {formatCurrency(POST_FEE - walletBalance)} để đăng
-                          tin.
-                        </AlertDescription>
-                      </Alert>
-                    )}
                   </div>
                 </>
               )}
@@ -607,16 +772,16 @@ export default function CreatePost() {
           <Button
             variant="outline"
             onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}
-            disabled={currentStep === 1}
+            disabled={currentStep === 1 || loading}
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
             Quay lại
           </Button>
 
-          {currentStep < 5 ? (
+          {currentStep < steps.length ? (
             <Button
-              onClick={() => setCurrentStep((prev) => Math.min(5, prev + 1))}
-              disabled={!canProceed()}
+              onClick={() => setCurrentStep((prev) => Math.min(steps.length, prev + 1))}
+              disabled={!canProceed() || uploadingImages}
             >
               Tiếp tục
               <ChevronRight className="h-4 w-4 ml-2" />
@@ -624,10 +789,16 @@ export default function CreatePost() {
           ) : (
             <Button
               onClick={handleSubmit}
-              disabled={walletBalance < POST_FEE || loading}
+              disabled={loading || !canProceed()}
               className="bg-gradient-to-r from-primary to-accent hover:opacity-90"
             >
-              {loading ? "Đang xử lý..." : "Thanh toán & Đăng tin"}
+              {loading
+                ? "Đang xử lý..."
+                : isEditMode 
+                  ? "Cập nhật tin"
+                  : hasActiveSubscription
+                    ? "Đăng tin"
+                    : "Thanh toán & Đăng tin"}
             </Button>
           )}
         </div>

@@ -5,7 +5,6 @@ import {
   TrendingUp,
   Eye,
   Home,
-  Wallet,
   ArrowUpRight,
   Clock,
   BarChart3,
@@ -21,15 +20,11 @@ import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { mapApiRoomToRoom, type LandlordRoom } from "@/utils/mappers/roomMapper";
 
-interface WalletData {
-  balance: number;
-}
 
 export default function LandlordDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [walletBalance, setWalletBalance] = useState(0);
   const [recentPosts, setRecentPosts] = useState<LandlordRoom[]>([]);
   const [stats, setStats] = useState({
     totalPosts: 0,
@@ -48,12 +43,6 @@ export default function LandlordDashboard() {
     try {
       setLoading(true);
 
-      // Fetch wallet balance
-      const { data: walletData, error: walletError } = await apiClient.getWallet();
-
-      if (!walletError && walletData?.wallet) {
-        setWalletBalance(walletData.wallet.balance);
-      }
 
       // Fetch rooms/posts
       const { data: roomsData, error: roomsError } = await apiClient.getMyRooms();
@@ -79,15 +68,6 @@ export default function LandlordDashboard() {
   };
 
   const statsCards = [
-    {
-      label: "Số dư ví",
-      value: walletBalance,
-      icon: Wallet,
-      trend: "Nhấn để nạp tiền",
-      color: "from-emerald-500 to-teal-500",
-      isCurrency: true,
-      onClick: () => navigate("/landlord/wallet"),
-    },
     {
       label: "Tin đang đăng",
       value: stats.activePosts,
@@ -157,9 +137,7 @@ export default function LandlordDashboard() {
                     <stat.icon className="h-6 w-6 text-white" />
                   </div>
                   <div className="text-2xl font-bold">
-                    {stat.isCurrency
-                      ? formatCurrency(stat.value)
-                      : stat.value.toLocaleString()}
+                    {stat.value.toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {stat.label}
@@ -193,20 +171,6 @@ export default function LandlordDashboard() {
             </CardContent>
           </Card>
 
-          <Card
-            className="hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => navigate("/landlord/wallet")}
-          >
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="p-3 bg-emerald-500/10 rounded-xl">
-                <Wallet className="h-6 w-6 text-emerald-600" />
-              </div>
-              <div>
-                <div className="font-semibold">Nạp tiền</div>
-                <div className="text-sm text-muted-foreground">Quản lý ví</div>
-              </div>
-            </CardContent>
-          </Card>
 
           <Card
             className="hover:shadow-lg transition-shadow cursor-pointer"
