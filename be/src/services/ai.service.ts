@@ -196,7 +196,7 @@ export async function queryRoommates(
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
 const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
-const DEEPSEEK_TIMEOUT = 15_000;
+const DEEPSEEK_TIMEOUT = 30_000;
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
@@ -243,7 +243,7 @@ export function callDeepSeek(prompt: string): Promise<string> {
       model: DEEPSEEK_MODEL,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.4,
-      max_tokens: 250,
+      max_tokens: 500,
       top_p: 0.9,
     });
 
