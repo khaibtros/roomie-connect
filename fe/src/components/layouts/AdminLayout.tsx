@@ -8,7 +8,8 @@ import {
   Settings, 
   LogOut,
   Menu,
-  Shield
+  Shield,
+  Truck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -24,6 +25,7 @@ const navItems = [
   { label: 'Quản lý phòng', href: '/admin/rooms', icon: Home },
   { label: 'Quản lý người dùng', href: '/admin/users', icon: Users },
   { label: 'Giao dịch', href: '/admin/transactions', icon: CreditCard },
+  { label: 'Dịch vụ', href: '/admin/services', icon: Truck },
   { label: 'Cài đặt', href: '/admin/settings', icon: Settings },
 ];
 

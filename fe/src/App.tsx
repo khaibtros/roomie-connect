@@ -57,6 +57,12 @@ import Privacy from "./pages/Privacy";
 import Support from "./pages/Support";
 import AppRating from "./pages/AppRating";
 
+// Service Pages
+import ServicesList from "./pages/tenant/services/ServicesList";
+import ServiceBookingForm from "./pages/tenant/services/ServiceBookingForm";
+import MyServiceBookings from "./pages/tenant/services/MyServiceBookings";
+import AdminServices from "./pages/admin/AdminServices";
+
 const queryClient = new QueryClient();
 
 function ProtectedRoute({
@@ -138,6 +144,32 @@ const App = () => (
               element={
                 <ProtectedRoute role="tenant">
                   <TenantViewings />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Tenant Service routes */}
+            <Route
+              path="/services"
+              element={
+                <ProtectedRoute role="tenant">
+                  <ServicesList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/services/book/:type"
+              element={
+                <ProtectedRoute role="tenant">
+                  <ServiceBookingForm />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/services/my-bookings"
+              element={
+                <ProtectedRoute role="tenant">
+                  <MyServiceBookings />
                 </ProtectedRoute>
               }
             />
@@ -267,6 +299,14 @@ const App = () => (
               element={
                 <ProtectedRoute role="admin">
                   <AdminViewings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/services"
+              element={
+                <ProtectedRoute role="admin">
+                  <AdminServices />
                 </ProtectedRoute>
               }
             />

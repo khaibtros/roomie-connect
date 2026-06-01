@@ -13,6 +13,7 @@ import landlordViewingRoutes from "./landlord-viewing.routes";
 import tenantViewingRoutes from "./tenant-viewing.routes";
 import adminViewingRoutes from "./admin-viewing.routes";
 import coinRoutes from "./coin.routes";
+import serviceRoutes from "./service.routes";
 
 const router = Router();
 
@@ -47,5 +48,6 @@ router.use("/subscription",  subscriptionRoutes);
 router.use("/landlord/viewings", landlordViewingRoutes);
 router.use("/viewings",      tenantViewingRoutes);
 router.use("/coin",          coinRoutes);
+router.use("/services",      serviceRoutes);
 
 export default router;

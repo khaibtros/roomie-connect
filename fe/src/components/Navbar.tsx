@@ -10,6 +10,7 @@ const navItems = [
   { path: '/home', label: 'Trang chủ' },
   { path: '/find-room', label: 'Tìm trọ' },
   { path: '/find-roommate', label: 'Tìm bạn ở ghép' },
+  { path: '/services', label: 'Dịch vụ' },
 ];
 
 export function Navbar() {
