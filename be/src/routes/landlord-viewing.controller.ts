@@ -100,8 +100,8 @@ export const payViewing = async (
     );
 
     // Generate PayOS checkout link
-    const cancelUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/landlord/viewings?payment=cancel`;
-    const returnUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/landlord/viewings?payment=success`;
+    const cancelUrl = `${process.env.FRONTEND_URL || "http://localhost:8080"}/landlord/viewings?payment=cancel`;
+    const returnUrl = `${process.env.FRONTEND_URL || "http://localhost:8080"}/landlord/viewings?payment=success`;
 
     let checkoutUrl = "";
     try {

@@ -1,5 +1,8 @@
 import { Router, Request, Response } from "express";
 import { Room } from "../models";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
 import {
   authMiddleware,
   landlordOnly,
@@ -8,6 +11,44 @@ import {
 import { checkSubscriptionMiddleware } from "../middleware/subscription.middleware";
 
 const router = Router();
+
+// ── Room images upload – multer configuration ───────────────────────────
+const MAX_ROOM_IMAGES = 10;
+const MAX_ROOM_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_ROOM_IMAGE_MIMES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+
+const ROOM_UPLOADS_DIR = path.resolve(__dirname, "../../uploads/rooms");
+
+// Create uploads dir on startup if it doesn't exist
+if (!fs.existsSync(ROOM_UPLOADS_DIR)) {
+  fs.mkdirSync(ROOM_UPLOADS_DIR, { recursive: true });
+}
+
+const roomImageStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, ROOM_UPLOADS_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || ".webp";
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    cb(null, uniqueName);
+  },
+});
+
+const roomImageUploadMiddleware = multer({
+  storage: roomImageStorage,
+  limits: { fileSize: MAX_ROOM_IMAGE_SIZE_BYTES },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_ROOM_IMAGE_MIMES.has(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid file type. Only JPEG, PNG, WebP and GIF are allowed."));
+    }
+  },
+}).array("images", MAX_ROOM_IMAGES);
 
 // GET /api/rooms - List all active rooms (public)
 router.get("/", async (req: Request, res: Response) => {
@@ -194,6 +235,49 @@ router.get(
       console.error("Get my rooms error:", error);
       res.status(500).json({ error: "Failed to get your rooms" });
     }
+  },
+);
+
+// POST /api/rooms/upload-images - Upload multiple room images
+router.post(
+  "/upload-images",
+  authMiddleware,
+  landlordOnly,
+  (req: AuthRequest, res: Response) => {
+    roomImageUploadMiddleware(req as Request, res, async (err) => {
+      if (err instanceof multer.MulterError) {
+        const status = err.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+        res.status(status).json({
+          error:
+            err.code === "LIMIT_FILE_SIZE"
+              ? `File too large. Maximum allowed size is ${MAX_ROOM_IMAGE_SIZE_BYTES / (1024 * 1024)} MB.`
+              : `Upload error: ${err.message}`,
+        });
+        return;
+      }
+      if (err) {
+        res.status(400).json({ error: err.message });
+        return;
+      }
+
+      const files = (req as Request).files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        res.status(400).json({ error: "No files received." });
+        return;
+      }
+
+      try {
+        const host = `${req.protocol}://${req.get("host")}`;
+        const imageURLs = files.map(
+          (file) => `${host}/uploads/rooms/${file.filename}`,
+        );
+
+        res.json({ imageURLs });
+      } catch (uploadErr) {
+        console.error("Room images upload error:", uploadErr);
+        res.status(500).json({ error: "Failed to upload images." });
+      }
+    });
   },
 );
 

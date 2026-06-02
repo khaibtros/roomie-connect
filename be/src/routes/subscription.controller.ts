@@ -137,8 +137,8 @@ export const subscribe = async (req: Request, res: Response) => {
     await subscription.save();
 
     // Generate PayOS link
-    const cancelUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/landlord/subscription?status=cancel`;
-    const returnUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/landlord/subscription?status=success`;
+    const cancelUrl = `${process.env.FRONTEND_URL || "http://localhost:8080"}/landlord/subscription?status=cancel`;
+    const returnUrl = `${process.env.FRONTEND_URL || "http://localhost:8080"}/landlord/subscription?status=success`;
 
     let checkoutUrl = "";
     try {

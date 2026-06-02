@@ -46,7 +46,6 @@ import AdminSettings from "./pages/admin/Settings";
 import AdminViewings from "./pages/admin/Viewings";
 import LandlordDashboard from "./pages/landlord/Dashboard";
 import LandlordPosts from "./pages/landlord/Posts";
-import LandlordWallet from "./pages/landlord/Wallet";
 import LandlordProfile from "./pages/landlord/Profile";
 import CreatePost from "./pages/landlord/CreatePost";
 import LandlordSubscription from "./pages/landlord/Subscription";
@@ -57,6 +56,12 @@ import Notifications from "./pages/Notifications";
 import Privacy from "./pages/Privacy";
 import Support from "./pages/Support";
 import AppRating from "./pages/AppRating";
+
+// Service Pages
+import ServicesList from "./pages/tenant/services/ServicesList";
+import ServiceBookingForm from "./pages/tenant/services/ServiceBookingForm";
+import MyServiceBookings from "./pages/tenant/services/MyServiceBookings";
+import AdminServices from "./pages/admin/AdminServices";
 
 const queryClient = new QueryClient();
 
@@ -142,6 +147,32 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            
+            {/* Tenant Service routes */}
+            <Route
+              path="/services"
+              element={
+                <ProtectedRoute role="tenant">
+                  <ServicesList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/services/book/:type"
+              element={
+                <ProtectedRoute role="tenant">
+                  <ServiceBookingForm />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/services/my-bookings"
+              element={
+                <ProtectedRoute role="tenant">
+                  <MyServiceBookings />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Landlord routes (dashboard + create) */}
             <Route
@@ -157,14 +188,6 @@ const App = () => (
               element={
                 <ProtectedRoute role="landlord">
                   <LandlordPosts />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/landlord/wallet"
-              element={
-                <ProtectedRoute role="landlord">
-                  <LandlordWallet />
                 </ProtectedRoute>
               }
             />
@@ -202,6 +225,14 @@ const App = () => (
             />
             <Route
               path="/landlord/post"
+              element={
+                <ProtectedRoute role="landlord">
+                  <CreatePost />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/landlord/edit-post/:id"
               element={
                 <ProtectedRoute role="landlord">
                   <CreatePost />
@@ -268,6 +299,14 @@ const App = () => (
               element={
                 <ProtectedRoute role="admin">
                   <AdminViewings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/services"
+              element={
+                <ProtectedRoute role="admin">
+                  <AdminServices />
                 </ProtectedRoute>
               }
             />

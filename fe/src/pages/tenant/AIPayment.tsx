@@ -94,11 +94,21 @@ export default function AIPayment() {
     const params = new URLSearchParams(window.location.search);
     const status = params.get("status");
     if (status === "success") {
-      toast.success("Thanh toán thành công! Giao dịch đang được xử lý.");
-      // Refresh user to get new coin balance
+      toast.success("Thanh toán thành công! Đang cập nhật số dư...");
+      
+      // PayOS webhooks can be slightly delayed. 
+      // We try to refresh immediately, and then again after 2 and 5 seconds.
       refreshUser();
-      // Remove query param
+      const timer1 = setTimeout(() => refreshUser(), 2000);
+      const timer2 = setTimeout(() => refreshUser(), 5000);
+
+      // Remove query param to prevent re-triggering on manual refresh
       window.history.replaceState({}, "", window.location.pathname);
+
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
     } else if (status === "cancel") {
       toast.error("Bạn đã hủy thanh toán.");
       window.history.replaceState({}, "", window.location.pathname);

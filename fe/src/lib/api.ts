@@ -531,6 +531,35 @@ class ApiClient {
     });
   }
 
+  // Service Bookings endpoints
+  async createServiceBooking(data: any) {
+    return this.request<{ message: string; booking: any }>('/services/bookings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getMyServiceBookings() {
+    return this.request<any[]>('/services/my-bookings');
+  }
+
+  async cancelServiceBooking(id: string) {
+    return this.request<{ message: string }>(`/services/bookings/${id}/cancel`, {
+      method: 'PATCH',
+    });
+  }
+
+  async getAdminServiceBookings() {
+    return this.request<any[]>('/services/admin/bookings');
+  }
+
+  async updateServiceBookingStatus(id: string, status: string, adminNote?: string) {
+    return this.request<{ message: string; booking: any }>(`/services/admin/bookings/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, adminNote }),
+    });
+  }
+
   /**
    * Upload a pre-processed avatar Blob via FormData.
    * The backend saves the file, returns { avatarUrl } pointing to the
@@ -558,6 +587,30 @@ class ApiClient {
     } catch (err) {
       return {
         data: { avatarUrl: '' },
+        error: err instanceof Error ? err.message : 'Network error',
+      };
+    }
+  }
+
+  async uploadRoomImages(formData: FormData): Promise<{ data: { imageURLs: string[] }; error?: string }> {
+    const headers: HeadersInit = {};
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+    try {
+      const response = await fetch(`${API_BASE_URL}/rooms/upload-images`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return { data: { imageURLs: [] }, error: data.error || `HTTP ${response.status}` };
+      }
+      return { data };
+    } catch (err) {
+      return {
+        data: { imageURLs: [] },
         error: err instanceof Error ? err.message : 'Network error',
       };
     }

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Building2, Users, MessageCircle, User, LogOut } from 'lucide-react';
+import { Home, Building2, Users, MessageCircle, User, LogOut, Truck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +9,7 @@ const navItems = [
   { path: '/home', icon: Home, label: 'Trang chủ' },
   { path: '/find-room', icon: Building2, label: 'Tìm trọ' },
   { path: '/quiz', icon: Users, label: 'Tìm bạn' },
+  { path: '/services', icon: Truck, label: 'Dịch vụ' },
   { path: '/messages', icon: MessageCircle, label: 'Tin nhắn' },
   { path: '/profile', icon: User, label: 'Tôi' },
 ];
