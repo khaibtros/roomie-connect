@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Truck, Sparkles, Filter, Edit, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import AdminLayout from '@/components/layouts/AdminLayout';
+import AdminLayout from '@/layouts/AdminLayout';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
 import { format } from 'date-fns';
