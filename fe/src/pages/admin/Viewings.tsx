@@ -27,6 +27,7 @@ import {
 import AdminLayout from "@/layouts/AdminLayout";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
+import { normalizeImageUrl } from "@/lib/utils";
 import type {
   AdminViewingDTO,
   ViewingStatus,
@@ -415,8 +416,13 @@ export default function AdminViewings() {
                         <div className="w-12 h-12 rounded-md overflow-hidden bg-muted">
                           {v.room.imageUrl ? (
                             <img
-                              src={v.room.imageUrl}
+                              src={normalizeImageUrl(v.room.imageUrl)}
                               alt={v.room.title}
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.onerror = null;
+                                target.src = '/placeholder-room.jpg';
+                              }}
                               className="w-full h-full object-cover"
                             />
                           ) : (

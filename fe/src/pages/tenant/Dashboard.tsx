@@ -14,7 +14,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import TenantLayout from '@/components/layouts/TenantLayout';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, normalizeImageUrl } from '@/lib/utils';
 
 const quickStats = [
   { label: 'Phòng phù hợp', value: 45, icon: Home },
@@ -171,8 +171,13 @@ export default function TenantDashboard() {
                   <Card className="overflow-hidden group hover:shadow-elevated transition-all">
                     <div className="aspect-video relative overflow-hidden">
                       <img 
-                        src={room.image} 
+                        src={normalizeImageUrl(room.image)} 
                         alt={room.title}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = '/placeholder-room.jpg';
+                        }}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>

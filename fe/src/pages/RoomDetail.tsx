@@ -27,7 +27,7 @@ import {
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, normalizeImageUrl } from "@/lib/utils";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -353,8 +353,13 @@ export default function RoomDetail() {
             <ChevronLeft className="h-8 w-8" />
           </button>
           <img
-            src={room.images?.[currentImage]}
+            src={room.images?.[currentImage] ? normalizeImageUrl(room.images[currentImage]) : '/placeholder-room.jpg'}
             alt=""
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = '/placeholder-room.jpg';
+            }}
             className="max-h-[90vh] max-w-[90vw] object-contain"
           />
           <button
@@ -387,8 +392,13 @@ export default function RoomDetail() {
                 onClick={() => setShowLightbox(true)}
               >
                 <img
-                  src={room.images?.[0]}
+                  src={room.images?.[0] ? normalizeImageUrl(room.images[0]) : '/placeholder-room.jpg'}
                   alt=""
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = '/placeholder-room.jpg';
+                  }}
                   className="w-full h-full object-cover hover:scale-105 transition-transform"
                 />
               </div>
@@ -402,8 +412,13 @@ export default function RoomDetail() {
                   }}
                 >
                   <img
-                    src={img}
+                    src={normalizeImageUrl(img)}
                     alt=""
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null;
+                      target.src = '/placeholder-room.jpg';
+                    }}
                     className="w-full h-full object-cover hover:scale-105 transition-transform"
                   />
                 </div>
@@ -573,8 +588,13 @@ export default function RoomDetail() {
               {/* Owner */}
               <div className="flex items-center gap-3">
                 <img
-                  src={room.owner?.avatar || "/placeholder-avatar.png"}
+                  src={room.owner?.avatar ? normalizeImageUrl(room.owner.avatar) : "/placeholder-avatar.png"}
                   alt=""
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = '/placeholder-avatar.png';
+                  }}
                   className="w-12 h-12 rounded-full object-cover"
                 />
                 <div className="flex-1">

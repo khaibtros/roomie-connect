@@ -16,7 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from "@/components/ui/badge";
+import { normalizeImageUrl } from "@/lib/utils";
 import TenantLayout from '@/components/layouts/TenantLayout';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
@@ -198,8 +199,13 @@ export default function AISearch() {
                                 className="flex items-center gap-3 p-3 rounded-xl bg-card border hover:border-primary transition-all cursor-pointer"
                               >
                                 <img 
-                                  src={room.image} 
+                                  src={normalizeImageUrl(room.image)} 
                                   alt={room.title} 
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.onerror = null;
+                                    target.src = '/placeholder-room.jpg';
+                                  }}
                                   className="w-16 h-12 rounded-lg object-cover"
                                 />
                                 <div className="flex-1 text-left">
@@ -224,8 +230,13 @@ export default function AISearch() {
                                 className="flex items-center gap-3 p-3 rounded-xl bg-card border hover:border-accent transition-all cursor-pointer"
                               >
                                 <img 
-                                  src={mate.avatar} 
+                                  src={normalizeImageUrl(mate.avatar)} 
                                   alt={mate.name} 
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.onerror = null;
+                                    target.src = '/placeholder-avatar.png';
+                                  }}
                                   className="w-10 h-10 rounded-full object-cover"
                                 />
                                 <div className="flex-1 text-left">

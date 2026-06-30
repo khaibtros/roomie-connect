@@ -14,7 +14,7 @@ import {
 import { Room } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, normalizeImageUrl } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
@@ -130,7 +130,7 @@ export function RoomCard({ room, onSave, isSaved = false }: RoomCardProps) {
       title: room.title,
       address: room.address,
       price: room.price,
-      thumbnail: room.images[0] ?? "",
+      thumbnail: room.images && room.images.length > 0 ? normalizeImageUrl(room.images[0]) : "/placeholder-room.jpg",
     });
   };
 
@@ -145,8 +145,13 @@ export function RoomCard({ room, onSave, isSaved = false }: RoomCardProps) {
         {/* Image Carousel */}
         <div className="relative aspect-[4/3] overflow-hidden group">
           <img
-            src={room.images[currentImage]}
+            src={room.images && room.images.length > 0 ? normalizeImageUrl(room.images[currentImage]) : '/placeholder-room.jpg'}
             alt={room.title}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null; // Prevent infinite loop
+              target.src = '/placeholder-room.jpg';
+            }}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
 
@@ -154,7 +159,7 @@ export function RoomCard({ room, onSave, isSaved = false }: RoomCardProps) {
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
 
           {/* Navigation Arrows */}
-          {room.images.length > 1 && (
+          {room.images && room.images.length > 1 && (
             <>
               <button
                 onClick={prevImage}

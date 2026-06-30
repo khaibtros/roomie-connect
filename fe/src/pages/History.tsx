@@ -5,6 +5,7 @@ import { ArrowLeft, Trash2, MapPin, DollarSign } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { normalizeImageUrl } from '@/lib/utils';
 
 interface ViewedRoom {
   id: string;
@@ -126,8 +127,13 @@ export default function History() {
               {/* Image */}
               {room.image && (
                 <img
-                  src={room.image}
+                  src={normalizeImageUrl(room.image)}
                   alt={room.title}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = '/placeholder-room.jpg';
+                  }}
                   className="h-20 w-20 rounded-lg object-cover"
                 />
               )}

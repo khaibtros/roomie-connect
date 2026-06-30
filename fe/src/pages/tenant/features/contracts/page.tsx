@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { normalizeImageUrl } from "@/lib/utils";
 import type { ApiViewingRequest, ViewingStatus, DecisionStatus } from "@/types/api";
 
 interface ViewingItem {
@@ -269,8 +270,13 @@ export default function TenantViewings() {
                       <div className="aspect-square rounded-xl overflow-hidden bg-muted">
                         {viewing.roomImage ? (
                           <img
-                            src={viewing.roomImage}
+                            src={normalizeImageUrl(viewing.roomImage)}
                             alt={viewing.roomTitle}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.onerror = null;
+                              target.src = '/placeholder-room.jpg';
+                            }}
                             className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
                             onClick={() => navigate(`/rooms/${viewing.roomId}`)}
                           />

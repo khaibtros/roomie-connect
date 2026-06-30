@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { QuizPreferences, MatchResult } from "@/types";
 import { DEFAULT_USER_PREFERENCES } from "@/data/mockData";
 import { findMatches, getMatchLevel } from "@/utils/matching";
-import { cn } from "@/lib/utils";
+import { cn, normalizeImageUrl } from "@/lib/utils";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -109,8 +109,13 @@ function MatchCard({
           />
           <div className="relative m-1">
             <img
-              src={match.user.avatar}
+              src={normalizeImageUrl(match.user.avatar)}
               alt={match.user.name}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.onerror = null;
+                target.src = '/placeholder-avatar.png';
+              }}
               className="w-16 h-16 rounded-full object-cover border-2 border-background"
             />
           </div>

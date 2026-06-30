@@ -26,6 +26,7 @@ import { apiClient } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { mapApiRoomToUiRoom } from "@/utils/mappers";
+import { normalizeImageUrl } from "@/lib/utils";
 import type { Room } from "@/types";
 import type { ApiFavorite, ApiRoom } from "@/types/api";
 
@@ -226,8 +227,13 @@ export default function SavedRooms() {
                     <div className="aspect-square rounded-xl overflow-hidden bg-muted">
                       {room.images?.[0] ? (
                         <img
-                          src={room.images[0]}
+                          src={normalizeImageUrl(room.images[0])}
                           alt={room.title}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = '/placeholder-room.jpg';
+                          }}
                           className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
                           onClick={() => navigate(`/rooms/${room.id}`)}
                         />
