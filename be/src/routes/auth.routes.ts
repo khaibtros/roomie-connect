@@ -1,5 +1,3 @@
-import path from "path";
-import fs from "fs";
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -7,6 +5,7 @@ import multer from "multer";
 import { User } from "../models";
 import { Notification } from "../models/Notification";
 import { authMiddleware, AuthRequest } from "../middleware/auth.middleware";
+import { avatarStorage } from "../config/cloudinary";
 
 const router = Router();
 
@@ -15,36 +14,11 @@ const otpStore: Record<string, { otp: string; expiresAt: number }> = {};
 
 // ── Avatar upload – multer configuration ─────────────────────────────────
 const MAX_AVATAR_SIZE_BYTES = 15 * 1024 * 1024; // 15 MB (canvas already resized)
-const ALLOWED_AVATAR_MIMES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
-const UPLOADS_DIR = path.resolve(__dirname, "../../uploads/avatars");
-
-// Create uploads dir on startup if it doesn't exist
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-const avatarStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname) || ".webp";
-    // Unique name: timestamp + random suffix to avoid collisions
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-    cb(null, uniqueName);
-  },
-});
-
+// Upload to Cloudinary
 const avatarUploadMiddleware = multer({
   storage: avatarStorage,
   limits: { fileSize: MAX_AVATAR_SIZE_BYTES },
-  fileFilter: (_req, file, cb) => {
-    if (ALLOWED_AVATAR_MIMES.has(file.mimetype)) {
-      cb(null, true);
-    } else {
-      // Passing an error to cb rejects the file and stops the upload
-      cb(new Error("Invalid file type. Only JPEG, PNG, and WebP are allowed."));
-    }
-  },
 }).single("avatar");
 
 // POST /api/auth/register
@@ -314,8 +288,7 @@ router.post(
       }
 
       try {
-        const host = `${req.protocol}://${req.get("host")}`;
-        const avatarUrl = `${host}/uploads/avatars/${file.filename}`;
+        const avatarUrl = file.path;
 
         // Persist new avatarUrl to MongoDB
         const user = await User.findByIdAndUpdate(
@@ -325,8 +298,6 @@ router.post(
         ).select("-password");
 
         if (!user) {
-          // Clean up just-saved file to avoid orphans
-          fs.unlink(file.path, () => undefined);
           res.status(404).json({ error: "User not found." });
           return;
         }
@@ -334,8 +305,6 @@ router.post(
         res.json({ avatarUrl });
       } catch (dbErr) {
         console.error("upload-avatar DB error:", dbErr);
-        // Remove orphan file on DB failure
-        fs.unlink(file.path, () => undefined);
         res.status(500).json({ error: "Failed to save avatar URL." });
       }
     });
