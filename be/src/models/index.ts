@@ -3,7 +3,7 @@ export { Room, IRoom, RoomStatus, IUtilities } from "./Room";
 export {
   RoommateProfile,
   IRoommateProfile,
-  IQuizPreferences,
+  IQuizResults,
 } from "./RoommateProfile";
 export { Notification, INotification } from "./Notification";
 export { ChatMessage, IChatMessage, MessageRole } from "./ChatMessage";

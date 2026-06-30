@@ -123,39 +123,36 @@ export function buildRoomPrompt(rooms: IRoom[], userMessage: string): string {
 // FIND_ROOMMATE — DB results only, preferences already in profile data
 // ---------------------------------------------------------------------------
 
-/** Human-readable Vietnamese labels for quiz preference enum values. */
-const PREF_LABELS: Record<string, string> = {
-  // sleepTime
-  early: "ngủ sớm", late: "thức khuya", poor_sleep: "ngủ không ngon", flexible: "giờ ngủ linh hoạt",
-  // smoking
-  smoke_indoors: "hút thuốc trong nhà", smoke_outdoors: "hút thuốc ngoài trời",
-  no_smoke_ok: "không hút thuốc", hate_smoke: "ghét khói thuốc",
-  // pets
-  have_pet: "đang nuôi thú cưng", like_pet: "thích thú cưng",
-  allergic: "dị ứng thú cưng", indifferent: "không quan tâm thú cưng",
-  // socialHabit
-  extrovert: "hướng ngoại", introvert: "hướng nội",
-  ambivert: "vừa hướng ngoại vừa nội tâm", reserved: "trầm tính",
-  // cookingHabit
-  cook_daily: "nấu ăn hàng ngày", cook_simple: "nấu đơn giản",
-  eat_out: "hay ăn ngoài", cook_together: "thích nấu chung",
-  // guests
-  often: "thường có khách", sometimes: "thỉnh thoảng có khách",
-  rarely: "ít khi có khách", never: "không có khách",
-  // alcohol
-  often_drink: "hay uống rượu", sometimes_drink: "thỉnh thoảng uống",
-  never_drink_home: "không uống tại nhà", cant_drink: "không uống được rượu",
-  // roomCleaning
-  daily: "dọn phòng hàng ngày", weekly: "dọn hàng tuần",
-  when_messy: "dọn khi bừa",
-  // genderPreference
-  male: "tìm bạn nam", female: "tìm bạn nữ",
-  lgbtq: "LGBTQ+ friendly", no_preference: "không quan trọng giới tính",
+const LIFESTYLE_LABELS: Record<string, string> = {
+  EARLY_BIRD: "ngủ sớm",
+  NIGHT_OWL: "thức khuya",
+  VERY_CLEAN: "rất sạch sẽ",
+  AVERAGE_CLEAN: "sạch sẽ cơ bản",
+  COOK_OFTEN: "thường nấu ăn",
+  EAT_OUT: "hay ăn ngoài",
+  GUESTS_OFTEN: "hay có khách",
+  NO_GUESTS: "không tiếp khách",
+  NO_SMOKING: "không hút thuốc",
+  PET_FRIENDLY: "yêu thú cưng",
+  QUIET: "thích yên tĩnh",
+  FLEXIBLE_TIME: "giờ giấc linh hoạt",
+  BOUNDARY_CLEAR: "rõ ràng ranh giới cá nhân",
+  ADAPTIVE: "dễ thích nghi",
+  CLEANLINESS_HIGH: "yêu cầu vệ sinh cao",
+  CLEANLINESS_FLEXIBLE: "vệ sinh linh hoạt",
+  GUEST_CONTROL: "kiểm soát khách khứa",
+  GUEST_FLEXIBLE: "thoải mái với khách",
+  PERSONAL_BOUNDARY_HIGH: "ranh giới đồ dùng cao",
+  SHARING_HIGH: "thoải mái dùng chung",
+  SPACE_NEEDED: "cần không gian riêng",
+  HARMONY_HIGH: "đề cao sự hòa hợp",
+  PROBLEM_SOLVING_DIRECT: "giải quyết vấn đề trực tiếp",
+  HARMONY_FLEXIBLE: "điều chỉnh linh hoạt để hòa hợp"
 };
 
-function labelPref(value: string | undefined): string {
-  if (!value) return "";
-  return PREF_LABELS[value] ?? value;
+function labelLifestyle(tags: string[] | undefined): string {
+  if (!tags || tags.length === 0) return "";
+  return tags.map(tag => LIFESTYLE_LABELS[tag] || tag).join(", ");
 }
 
 /**
@@ -177,18 +174,10 @@ export function buildRoommatePrompt(profiles: IRoommateProfile[], userMessage: s
       const districts = p.preferredDistrict?.join(", ") || "không giới hạn";
 
       // Build a concise preference summary from stored quiz answers
-      const prefs = p.preferences ?? {};
-      const prefTags = [
-        labelPref(prefs.sleepTime),
-        labelPref(prefs.smoking),
-        labelPref(prefs.pets),
-        labelPref(prefs.socialHabit),
-        labelPref(prefs.cookingHabit),
-        labelPref(prefs.guests),
-        labelPref(prefs.alcohol),
-        labelPref(prefs.roomCleaning),
-        labelPref(prefs.genderPreference),
-      ].filter(Boolean).join(" · ");
+      const prefs = p.preferences as any ?? {};
+      const typeStr = prefs.personalityType ? `Tính cách: ${prefs.personalityType}` : "";
+      const tagsStr = labelLifestyle(prefs.lifestyleTags);
+      const prefTags = [typeStr, tagsStr].filter(Boolean).join(" · ");
 
       const bio = p.bio ? ` | "${p.bio}"` : "";
       const prefLine = prefTags ? ` | ${prefTags}` : "";

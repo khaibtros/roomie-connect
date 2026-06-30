@@ -112,37 +112,30 @@ export interface ApiRoom {
 // ---------------------------------------------------------------------------
 // RoommateProfile
 // ---------------------------------------------------------------------------
-export interface QuizPreferences {
-  sleepTime?: string;
-  sleepNoise?: string;
-  alarmClock?: string;
-  nap?: string;
-  sleepHabits?: string;
-  roomCleaning?: string;
-  dishWashing?: string;
-  trash?: string;
-  organization?: string;
-  sharedBathroom?: string;
-  pets?: string;
-  guests?: string;
-  oppositeGender?: string;
-  studyTime?: string;
-  dressing?: string;
-  speaker?: string;
-  utilities?: string;
-  sharedItems?: string;
-  rentPayment?: string;
-  cookingHabit?: string;
-  socialHabit?: string;
-  smoking?: string;
-  acFan?: string;
-  conflictStyle?: string;
-  alcohol?: string;
-  priority?: string;
-  genderPreference?: string;
-  budget?: string;
-  location?: string;
-  duration?: string;
+export interface QuizAnswer {
+  questionId: number;
+  selectedOption: string;
+  trait?: string;
+  lifestyleTag?: string;
+}
+
+export interface PersonalityScores {
+  E: number;
+  I: number;
+  S: number;
+  N: number;
+  T: number;
+  F: number;
+  J: number;
+  P: number;
+}
+
+export interface QuizResults {
+  quizAnswers: QuizAnswer[];
+  personalityScores: PersonalityScores;
+  personalityType: string;
+  lifestyleTags: string[];
+  quizCompletedAt?: Date;
 }
 
 export interface ApiRoommateProfile {
@@ -155,7 +148,7 @@ export interface ApiRoommateProfile {
   university?: string;
   lookingFor?: string;
   isPublic: boolean;
-  preferences: QuizPreferences;
+  preferences?: QuizResults;
   createdAt: string;
   updatedAt: string;
 }
@@ -482,7 +475,7 @@ export interface RoommateProfileInput {
   university?: string;
   lookingFor?: string;
   isPublic?: boolean;
-  preferences?: QuizPreferences;
+  preferences?: QuizResults;
 }
 
 // ---------------------------------------------------------------------------

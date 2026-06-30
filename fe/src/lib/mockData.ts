@@ -1,5 +1,5 @@
 // src/lib/mockData.ts
-import { QuizPreferences, Room, User } from '@/types';
+import { QuizResults, Room, User } from '@/types';
 
 export const MOCK_USERS: User[] = [
   {
@@ -12,15 +12,9 @@ export const MOCK_USERS: User[] = [
     year: 3,
     bio: 'Thích yên tĩnh, không hút thuốc, ưu tiên gần trường.',
     preferences: {
-      sleepTime: 'normal',
-      cleanliness: 'clean',
-      socialHabit: 'ambivert',
-      smoking: 'never',
-      pet: 'no',
-      cooking: 'sometimes',
-      noise: 'quiet',
-      guests: 'rarely',
-      workSchedule: 'morning'
+      personalityType: "INTJ",
+      lifestyleTags: ["SPACE_NEEDED", "BOUNDARY_CLEAR", "CLEANLINESS_HIGH"],
+      personalityScores: { E: 0, I: 5, S: 2, N: 6, T: 4, F: 1, J: 5, P: 2 },
     },
     zaloId: '0912345678',
     verified: true
@@ -35,15 +29,9 @@ export const MOCK_USERS: User[] = [
     year: 4,
     bio: 'Hoà đồng, thích nấu ăn nhiều.',
     preferences: {
-      sleepTime: 'flexible',
-      cleanliness: 'moderate',
-      socialHabit: 'extrovert',
-      smoking: 'sometimes',
-      pet: 'ok',
-      cooking: 'often',
-      noise: 'moderate',
-      guests: 'sometimes',
-      workSchedule: 'flexible'
+      personalityType: "ESFP",
+      lifestyleTags: ["SHARING_HIGH", "GUEST_FLEXIBLE", "ADAPTIVE"],
+      personalityScores: { E: 7, I: 1, S: 6, N: 2, T: 1, F: 5, J: 1, P: 8 },
     },
     verified: false
   }

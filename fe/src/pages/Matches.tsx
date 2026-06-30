@@ -12,7 +12,7 @@ import {
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { QuizPreferences, MatchResult } from "@/types";
+import { QuizResults, MatchResult } from "@/types";
 import { DEFAULT_USER_PREFERENCES } from "@/data/mockData";
 import { findMatches, getMatchLevel } from "@/utils/matching";
 import { cn, normalizeImageUrl } from "@/lib/utils";
@@ -223,8 +223,8 @@ export default function Matches() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, refreshUser } = useAuth();
-  const [preferences, setPreferences] = useState<QuizPreferences>(
-    (location.state?.preferences as QuizPreferences) ||
+  const [preferences, setPreferences] = useState<QuizResults>(
+    (location.state?.preferences as QuizResults) ||
       DEFAULT_USER_PREFERENCES,
   );
   const [users, setUsers] = useState<any[]>([]);
@@ -259,7 +259,7 @@ export default function Matches() {
             data?.profile?.preferences &&
             Object.keys(data.profile.preferences).length > 0
           ) {
-            setPreferences(data.profile.preferences as QuizPreferences);
+            setPreferences(data.profile.preferences as QuizResults);
           } else {
             setPreferences(DEFAULT_USER_PREFERENCES);
           }

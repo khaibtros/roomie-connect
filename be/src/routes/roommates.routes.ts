@@ -175,32 +175,45 @@ router.post(
         let score = 0;
         let matchingTraits: string[] = [];
 
-        const myPrefs = myProfile.preferences as Record<string, string>;
-        const theirPrefs = profile.preferences as Record<string, string>;
+        const myPrefs = myProfile.preferences as any;
+        const theirPrefs = profile.preferences as any;
 
-        // Compare each preference
-        for (const key of Object.keys(myPrefs)) {
-          if (
-            myPrefs[key] &&
-            theirPrefs[key] &&
-            myPrefs[key] === theirPrefs[key]
-          ) {
-            score += 1;
-            matchingTraits.push(key);
-          }
+        // Ensure preferences exist
+        if (!myPrefs?.personalityType || !theirPrefs?.personalityType) {
+           return { profile, score: 0, matchingTraits: [] };
         }
 
-        // Normalize score to percentage
-        const totalPrefs = Object.keys(myPrefs).filter(
-          (k) => myPrefs[k],
-        ).length;
-        const percentage =
-          totalPrefs > 0 ? Math.round((score / totalPrefs) * 100) : 0;
+        // 1. Personality Match (max 60 points)
+        // Compare MBTI characters (e.g. "INTJ" vs "ENTP")
+        let personalityScore = 0;
+        const myType = myPrefs.personalityType as string;
+        const theirType = theirPrefs.personalityType as string;
+        
+        for (let i = 0; i < 4; i++) {
+          if (myType[i] && theirType[i] && myType[i] === theirType[i]) {
+            personalityScore += 15; // 15 points per matching character
+            matchingTraits.push(`Cùng tính cách ${myType[i]}`);
+          }
+        }
+        score += personalityScore;
+
+        // 2. Lifestyle Match (max 40 points)
+        let lifestyleScore = 0;
+        const myTags = (myPrefs.lifestyleTags || []) as string[];
+        const theirTags = (theirPrefs.lifestyleTags || []) as string[];
+
+        if (myTags.length > 0 && theirTags.length > 0) {
+          const sharedTags = myTags.filter(tag => theirTags.includes(tag));
+          lifestyleScore = Math.round((sharedTags.length / myTags.length) * 40);
+          score += lifestyleScore;
+          // Add some shared tags to matchingTraits
+          sharedTags.slice(0, 3).forEach(tag => matchingTraits.push(tag));
+        }
 
         return {
           profile,
-          score: percentage,
-          matchingTraits,
+          score,
+          matchingTraits: Array.from(new Set(matchingTraits)),
         };
       });
 
