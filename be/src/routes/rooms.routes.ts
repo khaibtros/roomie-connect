@@ -11,6 +11,32 @@ import { roomImageStorage } from "../config/cloudinary";
 
 const router = Router();
 
+// Transform utilities from frontend snake_case to backend camelCase
+function transformUtilities(data: any) {
+  if (!data) return data;
+
+  const utilities: any = {};
+  if (data.electricity_price !== undefined) utilities.electricityPrice = data.electricity_price;
+  if (data.water_price !== undefined) utilities.waterPrice = data.water_price;
+  if (data.internet_price !== undefined) utilities.internetPrice = data.internet_price;
+  if (data.cleaning_fee !== undefined) utilities.cleaningFee = data.cleaning_fee;
+  if (data.parking_fee !== undefined) utilities.parkingFee = data.parking_fee;
+
+  // Remove snake_case fields from data and add utilities object
+  const result = { ...data };
+  delete result.electricity_price;
+  delete result.water_price;
+  delete result.internet_price;
+  delete result.cleaning_fee;
+  delete result.parking_fee;
+
+  if (Object.keys(utilities).length > 0) {
+    result.utilities = utilities;
+  }
+
+  return result;
+}
+
 // ── Room images upload – multer configuration ───────────────────────────
 const MAX_ROOM_IMAGES = 10;
 const MAX_ROOM_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -101,8 +127,9 @@ router.post(
   checkSubscriptionMiddleware,
   async (req: AuthRequest, res: Response) => {
     try {
+      const transformedData = transformUtilities(req.body);
       const roomData = {
-        ...req.body,
+        ...transformedData,
         landlordId: req.userId,
         status: "pending", // Needs admin approval
       };
@@ -147,9 +174,11 @@ router.put(
       // Don't allow changing landlordId
       delete req.body.landlordId;
 
+      const transformedData = transformUtilities(req.body);
+
       const updatedRoom = await Room.findByIdAndUpdate(
         req.params.id,
-        { $set: req.body },
+        { $set: transformedData },
         { new: true },
       ).populate("landlordId", "fullName avatarUrl phone isVerified");
 
