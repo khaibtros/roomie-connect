@@ -217,7 +217,6 @@ router.get(
 router.post(
   "/upload-images",
   authMiddleware,
-  landlordOnly,
   (req: AuthRequest, res: Response) => {
     roomImageUploadMiddleware(req as Request, res, async (err) => {
       if (err instanceof multer.MulterError) {
