@@ -1,56 +1,45 @@
-export interface QuizPreferences {
-  // Phần 1: Giờ giấc & Thói quen ngủ (5 câu)
-  sleepTime: "early" | "late" | "poor_sleep" | "flexible";
-  sleepNoise:
-    | "very_sensitive"
-    | "somewhat_sensitive"
-    | "easy_sleep"
-    | "very_deep";
-  alarmClock: "immediate" | "snooze" | "many_alarms" | "no_alarm";
-  nap: "must_nap" | "sometimes_nap" | "rarely_nap" | "never_nap";
-  sleepHabits: "snore_grind" | "talk" | "sprawl" | "clean_sleep";
-  // Phần 2: Vệ sinh & Ngăn nắp (6 câu)
-  roomCleaning: "daily" | "weekly" | "when_messy" | "rarely";
-  dishWashing: "immediately" | "end_of_day" | "delayed" | "eat_out";
-  trash: "daily" | "full" | "smell" | "anywhere";
-  organization:
-    | "very_organized"
-    | "mostly_organized"
-    | "organized_chaos"
-    | "very_messy";
-  sharedBathroom:
-    | "schedule"
-    | "self_initiative"
-    | "paid_cleaning"
-    | "reluctant";
-  pets: "have_pet" | "like_pet" | "allergic" | "indifferent";
-  // Phần 3: Khách khứa & Riêng tư (5 câu)
-  guests: "often" | "sometimes" | "rarely" | "never";
-  oppositeGender: "comfortable" | "with_notice" | "visit_only" | "not_allowed";
-  studyTime: "morning" | "afternoon" | "evening_night" | "anytime_or_cafe";
-  dressing: "formal" | "casual" | "minimal" | "mood";
-  speaker: "often" | "sometimes" | "headphones" | "no_media";
-  // Phần 4: Tài chính & Sử dụng đồ chung (4 câu)
-  utilities: "equal" | "by_usage" | "separate_meter" | "all_in_rent";
-  sharedItems: "share_all" | "strictly_separate" | "ask_first" | "share_some";
-  rentPayment: "on_time" | "slightly_late" | "forgetful" | "often_late";
-  cooking_habit: "cook_daily" | "cook_simple" | "eat_out" | "cook_together";
-  // Phần 5: Tính cách & Lối sống (5 câu)
-  socialHabit: "extrovert" | "introvert" | "ambivert" | "reserved";
-  smoking: "smoke_indoors" | "smoke_outdoors" | "no_smoke_ok" | "hate_smoke";
-  ac_fan: "ac_always_cold" | "ac_moderate" | "ac_timer" | "fan_only";
-  conflict_style: "direct" | "message" | "silent" | "tell_others";
-  alcohol:
-    | "often_drink"
-    | "sometimes_drink"
-    | "never_drink_home"
-    | "cant_drink";
-  // Phần 6: Câu hỏi mở rộng (5 câu)
-  priority: "cleanliness" | "financial" | "personality" | "privacy";
-  gender_preference: "male" | "female" | "lgbtq" | "no_preference";
-  budget: "under_1.5m" | "1.5_2.5m" | "2.5_4m" | "over_4m";
-  location: "near_school" | "flexible_location" | "downtown" | "quiet_area";
-  duration: "short_term" | "medium_term" | "long_term" | "very_long_term";
+export interface QuizAnswer {
+  questionId: number;
+  selectedOption: string;
+  dimension?: string;
+  firstPoleScore?: number;
+  secondPoleScore?: number;
+  conflictScore?: number;
+}
+
+export interface PersonalityScores {
+  E: number;
+  I: number;
+  S: number;
+  N: number;
+  T: number;
+  F: number;
+  J: number;
+  P: number;
+}
+
+export interface DimensionStrength {
+  E_I: "strong" | "light" | "balanced";
+  S_N: "strong" | "light" | "balanced";
+  T_F: "strong" | "light" | "balanced";
+  J_P: "strong" | "light" | "balanced";
+}
+
+export interface ConflictProfile {
+  type: "DIRECT" | "BALANCED_FLEXIBLE" | "NEEDS_SPACE";
+  title: string;
+  description: string;
+}
+
+export interface QuizResults {
+  quizAnswers: QuizAnswer[];
+  personalityScores: PersonalityScores;
+  personalityType: string;
+  dimensionStrength?: DimensionStrength;
+  conflictScore?: number;
+  conflictProfile?: ConflictProfile;
+  lifestyleTags?: string[]; // Kept for backward compatibility
+  quizCompletedAt?: Date;
 }
 
 export interface User {
@@ -62,7 +51,7 @@ export interface User {
   major: string;
   year: number;
   bio: string;
-  preferences: Partial<QuizPreferences>;
+  preferences?: QuizResults;
   zaloId?: string;
   verified: boolean;
 }

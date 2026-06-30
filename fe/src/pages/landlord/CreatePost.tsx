@@ -36,7 +36,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import LandlordLayout from "@/components/layouts/LandlordLayout";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, normalizeImageUrl } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/api";
@@ -688,8 +688,13 @@ export default function CreatePost() {
                       {formData.images.map((url, index) => (
                         <div key={index} className="relative aspect-square group">
                           <img 
-                            src={url} 
+                            src={normalizeImageUrl(url)} 
                             alt={`Room image ${index + 1}`} 
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.onerror = null;
+                              target.src = '/placeholder-room.jpg';
+                            }}
                             className="w-full h-full object-cover rounded-xl border"
                           />
                           <button

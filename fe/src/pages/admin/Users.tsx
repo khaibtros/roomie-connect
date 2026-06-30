@@ -3,6 +3,7 @@ import AdminLayout from '@/layouts/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
+import { normalizeImageUrl } from '@/lib/utils';
 import type { ApiUser } from '@/types/api';
 
 export default function AdminUsers() {
@@ -105,7 +106,16 @@ export default function AdminUsers() {
                 <tr key={u.id || u._id}>
                   <td className="px-4 py-3 flex items-center gap-3">
                     {u.avatar ? (
-                      <img src={u.avatar} alt="" className="h-10 w-10 rounded-full object-cover" />
+                      <img 
+                        src={normalizeImageUrl(u.avatar)} 
+                        alt="" 
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = '/placeholder-avatar.png';
+                        }}
+                        className="h-10 w-10 rounded-full object-cover" 
+                      />
                     ) : (
                       <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-medium">
                         {u.fullName?.split(' ').slice(-1)[0]?.[0] || 'U'}

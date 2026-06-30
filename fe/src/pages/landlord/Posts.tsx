@@ -47,7 +47,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LandlordLayout from '@/components/layouts/LandlordLayout';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, normalizeImageUrl } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
@@ -320,8 +320,13 @@ export default function LandlordPosts() {
                       <div className="w-full sm:w-48 h-32 bg-muted rounded-xl overflow-hidden flex-shrink-0">
                         {post.images && post.images.length > 0 ? (
                           <img
-                            src={post.images[0]}
+                            src={normalizeImageUrl(post.images[0])}
                             alt={post.title}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.onerror = null;
+                              target.src = '/placeholder-room.jpg';
+                            }}
                             className="w-full h-full object-cover"
                           />
                         ) : (

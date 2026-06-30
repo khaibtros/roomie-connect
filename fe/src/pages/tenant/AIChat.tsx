@@ -43,6 +43,7 @@ import { toast } from "sonner";
 import RoomComparisonCard, {
   type RoomComparisonData,
 } from "@/components/RoomComparisonCard";
+import { normalizeImageUrl } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -535,8 +536,13 @@ export default function TenantAIChat() {
                                 <div className="flex gap-3">
                                   {images?.[0] && (
                                     <img
-                                      src={images[0]}
+                                      src={normalizeImageUrl(images[0])}
                                       alt={title}
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.onerror = null;
+                                        target.src = '/placeholder-room.jpg';
+                                      }}
                                       className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                                     />
                                   )}
@@ -646,8 +652,13 @@ export default function TenantAIChat() {
                                   <div className="flex-shrink-0 h-12 w-12 rounded-full overflow-hidden bg-gradient-to-br from-accent to-primary flex items-center justify-center">
                                     {avatar ? (
                                       <img
-                                        src={avatar}
+                                        src={normalizeImageUrl(avatar)}
                                         alt={name}
+                                        onError={(e) => {
+                                          const target = e.target as HTMLImageElement;
+                                          target.onerror = null;
+                                          target.src = '/placeholder-avatar.png';
+                                        }}
                                         className="w-full h-full object-cover"
                                       />
                                     ) : (

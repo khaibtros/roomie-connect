@@ -24,6 +24,7 @@ import {
   getContextRoomsFromHistory,
   resolveRoomsForComparison,
   buildRoomComparisonPayload,
+  findRoomByName,
   MIN_COMPARE_ROOMS,
   MAX_COMPARE_ROOMS,
   type RoomComparisonData,
@@ -172,11 +173,29 @@ export async function handleChat(
     detectedIntent = await classifyIntent(sanitized);
 
     if (detectedIntent === "UNKNOWN") {
-      reply =
-        "Xin lỗi, mình chưa hiểu rõ yêu cầu của bạn. " +
-        "Bạn có thể mô tả rõ hơn không? Ví dụ: 'Tìm phòng ở Thạch Hòa dưới 3 triệu' " +
-        "hoặc 'Tìm bạn ghép phòng khu vực Tân Xã'.";
-      responseType = ResponseType.CLARIFICATION;
+      // Before giving up, try to match the message as a room name
+      const rescueQuery = sanitized
+        .replace(/^(?:nhà\s*trọ|phòng\s*trọ|trọ|phòng)\s+/i, "")
+        .replace(/\s+(?:cho\s*tôi|nhé|nha|ạ|đi|nhá|giúp\s*mình)\s*$/gi, "")
+        .trim();
+      const rescueRoom = rescueQuery.length >= 2 ? await findRoomByName(rescueQuery) : null;
+
+      if (rescueRoom) {
+        // Reclassify as FIND_ROOM with a direct match
+        detectedIntent = "FIND_ROOM";
+        rooms = [rescueRoom];
+        responseType = ResponseType.DB_SUCCESS;
+        hasResults = true;
+        llmUsed = true;
+        reply = await callLocalLLM(buildRoomPrompt(rooms, sanitized));
+        console.log(`[KnockBot] UNKNOWN rescued as FIND_ROOM — matched "${rescueRoom.title}"`);
+      } else {
+        reply =
+          "Xin lỗi, mình chưa hiểu rõ yêu cầu của bạn. " +
+          "Bạn có thể mô tả rõ hơn không? Ví dụ: 'Tìm phòng ở Thạch Hòa dưới 3 triệu' " +
+          "hoặc 'Tìm bạn ghép phòng khu vực Tân Xã'.";
+        responseType = ResponseType.CLARIFICATION;
+      }
       // Fall through to unified persist block
     } else {
       // ══════════════════════════════════════════════════════════════════════
@@ -185,30 +204,49 @@ export async function handleChat(
 
       // ──────────────────────────── FIND_ROOM ────────────────────────────
       if (detectedIntent === "FIND_ROOM") {
-        const locResult = resolveSupportedLocations(sanitized);
-        if (!locResult.supported) {
-          reply = locResult.reason;
-          responseType = ResponseType.OUT_OF_SCOPE;
+        // First, try direct room name lookup for short queries like "trọ you & me"
+        const roomNameQuery = sanitized
+          .replace(/^(?:nhà\s*trọ|phòng\s*trọ|trọ|phòng)\s+/i, "")
+          .replace(/^(?:tìm|xem|cho\s*tôi)\s+/i, "")
+          .replace(/\s+(?:cho\s*tôi|nhé|nha|ạ|đi|nhá|giúp\s*mình)\s*$/gi, "")
+          .trim();
+
+        const directMatch = roomNameQuery.length >= 2 ? await findRoomByName(roomNameQuery) : null;
+
+        if (directMatch) {
+          // Found a room by name — return its info
+          rooms = [directMatch];
+          responseType = ResponseType.DB_SUCCESS;
+          hasResults = true;
+          llmUsed = true;
+          reply = await callLocalLLM(buildRoomPrompt(rooms, sanitized));
         } else {
-          const filters = extractRoomFilters(sanitized, locResult.regexFilter);
-          rooms = await queryRooms(filters);
-
-          if (rooms.length === 0) {
-            responseType = ResponseType.DB_EMPTY;
-            reply =
-              "Rất tiếc, mình không tìm thấy phòng nào phù hợp tại " +
-              locResult.wards.join(" và ") +
-              " với yêu cầu của bạn. Bạn thử điều chỉnh ngân sách hoặc tiêu chí nhé!";
+          // Fall back to location-based search
+          const locResult = resolveSupportedLocations(sanitized);
+          if (!locResult.supported) {
+            reply = locResult.reason;
+            responseType = ResponseType.OUT_OF_SCOPE;
           } else {
-            responseType = ResponseType.DB_SUCCESS;
-            hasResults = true;
-            llmUsed = true;
-            reply = await callLocalLLM(buildRoomPrompt(rooms, sanitized));
-          }
+            const filters = extractRoomFilters(sanitized, locResult.regexFilter);
+            rooms = await queryRooms(filters);
 
-          if (locResult.wards.length === 1)
-            memoryUpdates.location = locResult.wards[0];
-          if (filters.maxPrice) memoryUpdates.budget = filters.maxPrice;
+            if (rooms.length === 0) {
+              responseType = ResponseType.DB_EMPTY;
+              reply =
+                "Rất tiếc, mình không tìm thấy phòng nào phù hợp tại " +
+                locResult.wards.join(" và ") +
+                " với yêu cầu của bạn. Bạn thử điều chỉnh ngân sách hoặc tiêu chí nhé!";
+            } else {
+              responseType = ResponseType.DB_SUCCESS;
+              hasResults = true;
+              llmUsed = true;
+              reply = await callLocalLLM(buildRoomPrompt(rooms, sanitized));
+            }
+
+            if (locResult.wards.length === 1)
+              memoryUpdates.location = locResult.wards[0];
+            if (filters.maxPrice) memoryUpdates.budget = filters.maxPrice;
+          }
         }
 
         // ─────────────────────────── FIND_ROOMMATE ──────────────────────
@@ -269,13 +307,22 @@ export async function handleChat(
           `[KnockBot] compare_rooms — refs=${JSON.stringify(refs)} contextIds=${JSON.stringify(contextIds.slice(0, MAX_COMPARE_ROOMS))}`,
         );
 
-        const resolvedRooms = await resolveRoomsForComparison(refs, contextIds);
+        const { resolved: resolvedRooms, missing: missingRefs } = await resolveRoomsForComparison(refs, contextIds);
 
         console.log(
-          `[KnockBot] compare_rooms — resolved ${resolvedRooms.length} room(s)`,
+          `[KnockBot] compare_rooms — resolved ${resolvedRooms.length} room(s), missing ${missingRefs.length}`,
         );
 
-        if (resolvedRooms.length < MIN_COMPARE_ROOMS) {
+        if (refs.length >= 2 && missingRefs.length > 0) {
+          const foundNames = resolvedRooms.map((r) => r.title).join(" và ");
+          const missingNames = missingRefs.join(", ");
+          if (resolvedRooms.length > 0) {
+            reply = `Mình tìm thấy ${foundNames} nhưng chưa tìm thấy ${missingNames}. Bạn có muốn mình gợi ý trọ tương tự không?`;
+          } else {
+            reply = `Mình không tìm thấy ${missingNames}. Bạn có muốn mình gợi ý trọ tương tự không?`;
+          }
+          responseType = ResponseType.CLARIFICATION;
+        } else if (resolvedRooms.length < MIN_COMPARE_ROOMS) {
           reply =
             "Mình cần ít nhất 2 phòng để có thể so sánh. " +
             "Bạn có thể cho mình biết rõ tên hoặc ID của các phòng muốn so sánh không? " +

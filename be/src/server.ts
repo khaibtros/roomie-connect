@@ -79,7 +79,7 @@ const startServer = async () => {
       }, 5000).unref();
     };
 
-    process.once("SIGINT",  () => shutdown("SIGINT"));
+    process.once("SIGINT", () => shutdown("SIGINT"));
     process.once("SIGTERM", () => shutdown("SIGTERM"));
     // nodemon sends SIGUSR2 before restarting
     process.once("SIGUSR2", () => shutdown("SIGUSR2"));

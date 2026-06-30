@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
+import { normalizeImageUrl } from '@/lib/utils';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -162,7 +163,16 @@ export default function Profile() {
             <div className="relative">
               <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
                 {user?.avatarUrl ? (
-                  <img src={user.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                  <img 
+                    src={normalizeImageUrl(user.avatarUrl)} 
+                    alt="Avatar" 
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null;
+                      target.src = '/placeholder-avatar.png';
+                    }}
+                    className="h-full w-full object-cover" 
+                  />
                 ) : (
                   <User className="h-10 w-10 text-primary-foreground" />
                 )}

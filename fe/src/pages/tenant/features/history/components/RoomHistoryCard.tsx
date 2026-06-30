@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom"
 import { MapPin, Clock, ChevronRight } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatRelativeTime, formatPrice } from "@/lib/format"
+import { normalizeImageUrl } from "@/lib/utils"
 import type { RoomHistoryItem } from "../types"
 
 interface RoomHistoryCardProps {
@@ -21,8 +22,13 @@ export function RoomHistoryCard({ item }: RoomHistoryCardProps) {
           <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted shrink-0">
             {item.thumbnail ? (
               <img
-                src={item.thumbnail}
+                src={normalizeImageUrl(item.thumbnail)}
                 alt={item.title}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = '/placeholder-room.jpg';
+                }}
                 className="w-full h-full object-cover"
               />
             ) : (

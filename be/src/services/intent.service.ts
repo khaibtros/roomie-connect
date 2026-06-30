@@ -53,6 +53,17 @@ const ROOMMATE_RULE_RE =
 const ROOM_RULE_RE =
   /tìm\s*phòng|phòng\s*trọ\b|thuê\s*phòng|có\s*phòng\b|phòng\s*cho\s*thuê|danh\s*sách\s*phòng|xem\s*phòng|giá\s*phòng|phòng\s*trống|phòng\s*dưới/i;
 
+/**
+ * Detect short messages that are likely a room name or a request for room info.
+ * e.g. "you & me", "trọ you & me", "green home", "Long Thanh House"
+ *
+ * This pattern fires when the message starts with an optional room-type prefix
+ * ("nhà trọ", "trọ", "phòng trọ", "phòng") followed by a short proper-name
+ * fragment (1–6 words including "&" / "and").
+ */
+const ROOM_NAME_HINT_RE =
+  /^(?:nhà\s*trọ|phòng\s*trọ|trọ|phòng)\s+[\w&\s]{2,40}$/i;
+
 /** Simple greetings / acknowledgements that need no DB or LLM logic. */
 const SMALL_TALK_RE =
   /^(xin\s*chào|hello|hi\b|chào\s*bạn?|cảm\s*ơn|thanks|tạm\s*biệt|bye|ok\b|oke\b|được\s*rồi|được|cảm\s*ơn\s*bạn)[.!?,\s]*$/i;
@@ -65,6 +76,7 @@ export function classifyIntentFast(message: string): Intent | null {
   if (COMPARE_ROOMS_RULE_RE.test(message)) return "COMPARE_ROOMS";
   if (ROOMMATE_RULE_RE.test(message)) return "FIND_ROOMMATE";
   if (ROOM_RULE_RE.test(message)) return "FIND_ROOM";
+  if (ROOM_NAME_HINT_RE.test(message)) return "FIND_ROOM";
   if (SMALL_TALK_RE.test(message)) return "SMALL_TALK";
   return null;
 }

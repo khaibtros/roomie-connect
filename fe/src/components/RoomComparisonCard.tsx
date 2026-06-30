@@ -23,6 +23,7 @@ import {
   Check,
   ExternalLink,
 } from "lucide-react";
+import { normalizeImageUrl } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -111,8 +112,13 @@ function RoomHeader({ room, index }: { room: RoomComparisonData; index: number }
         <div className="relative h-28 bg-muted">
           {room.images[0] ? (
             <img
-              src={room.images[0]}
+              src={normalizeImageUrl(room.images[0])}
               alt={room.title}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.onerror = null;
+                target.src = '/placeholder-room.jpg';
+              }}
               className="w-full h-full object-cover"
             />
           ) : (

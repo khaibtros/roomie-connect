@@ -126,7 +126,87 @@ const TITLE_STOP_WORDS = new Set([
   "cho",
   "với",
   "hay",
+  "tôi",
+  "nhé",
+  "nha",
+  "ạ",
+  "đi",
+  "nhá",
+  "giúp",
+  "mình",
 ]);
+
+// ---------------------------------------------------------------------------
+// Text normalization helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Remove Vietnamese diacritics from a string.
+ * "Nhà trọ Hòa Vinh" → "Nha tro Hoa Vinh"
+ */
+function removeDiacritics(str: string): string {
+  return str
+    .replace(/[àáảãạâầấẩẫậăằắẳẵặ]/g, "a")
+    .replace(/[ÀÁẢÃẠÂẦẤẨẪẬĂẰẮẲẴẶ]/g, "A")
+    .replace(/[èéẻẽẹêềếểễệ]/g, "e")
+    .replace(/[ÈÉẺẼẸÊỀẾỂỄỆ]/g, "E")
+    .replace(/[ìíỉĩị]/g, "i")
+    .replace(/[ÌÍỈĨỊ]/g, "I")
+    .replace(/[òóỏõọôồốổỗộơờớởỡợ]/g, "o")
+    .replace(/[ÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢ]/g, "O")
+    .replace(/[ùúủũụưừứửữự]/g, "u")
+    .replace(/[ÙÚỦŨỤƯỪỨỬỮỰ]/g, "U")
+    .replace(/[ỳýỷỹỵ]/g, "y")
+    .replace(/[ỲÝỶỸỴ]/g, "Y")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D");
+}
+
+/**
+ * Normalise a room name for matching purposes.
+ * - lowercase
+ * - remove diacritics
+ * - treat "&" and "and" as equivalent
+ * - collapse whitespace
+ * - trim
+ */
+export function normalizeForRoomMatch(text: string): string {
+  let s = text.toLowerCase();
+  s = removeDiacritics(s);
+  s = s.replace(/&/g, "and");
+  s = s.replace(/\s+/g, " ").trim();
+  return s;
+}
+
+/**
+ * Generate searchable aliases for a room title.
+ * e.g. "Nhà trọ You & Me" → [
+ *   "nha tro you and me",
+ *   "you and me",
+ *   "you me",
+ *   "nha tro you me"
+ * ]
+ */
+function generateRoomAliases(title: string): string[] {
+  const base = normalizeForRoomMatch(title);
+  const withoutPrefix = base
+    .replace(/^(nha\s*tro|phong\s*tro|tro|phong)\s+/i, "")
+    .trim();
+
+  const aliases = new Set<string>();
+  aliases.add(base);
+  if (withoutPrefix !== base) aliases.add(withoutPrefix);
+
+  // Also add version without "and"
+  if (base.includes(" and ")) {
+    aliases.add(base.replace(/ and /g, " "));
+    if (withoutPrefix.includes(" and ")) {
+      aliases.add(withoutPrefix.replace(/ and /g, " "));
+    }
+  }
+
+  return Array.from(aliases);
+}
 
 // ---------------------------------------------------------------------------
 // 1. Intent Detection
@@ -154,8 +234,12 @@ export function detectCompareRoomsIntent(message: string): boolean {
  *
  * Strategy:
  *  1. Scan the whole message for 24-char hex MongoDB IDs.
- *  2. Split message by Vietnamese conjunctions (và, hoặc, với, hay) to isolate
- *     each room mention segment, then extract the word(s) after "phòng".
+ *  2. Remove noise prefixes ("so sánh", "cho tôi so sánh", etc.).
+ *  3. Split by VIETNAMESE conjunctions ONLY ("và", "hoặc", "với", "hay", "vs").
+ *     IMPORTANT: "and" is NOT used as a split delimiter because it can be part
+ *     of a room name (e.g. "You & Me" / "You and Me").
+ *  4. Strip room-type prefixes ("nhà trọ", "trọ", "phòng trọ", "phòng").
+ *  5. Remove trailing stop words.
  *
  * No LLM is invoked — pure rule-based extraction.
  */
@@ -180,33 +264,46 @@ export function extractRoomReferencesFromMessage(
     addRef("id", m[1]);
   }
 
-  // Phase 2 — split by conjunctions and extract "phòng <title>" per segment
-  const segments = message
-    .split(/\s+(?:và|hoặc|với|hay)\s+/i)
-    .map((s) => s.trim())
-    .filter(Boolean);
+  // Phase 2 — Remove noise prefixes
+  const noisePrefixes = /^so\s*sánh\s*giữa|^so\s*sánh|^cho\s*tôi\s*so\s*sánh|^gợi\s*ý/i;
+  let cleaned = message.replace(noisePrefixes, "").trim();
+
+  // Phase 3 — split by VIETNAMESE conjunctions and "vs" ONLY.
+  // "and" is explicitly NOT a delimiter here to preserve room names like "You and Me".
+  const segments = cleaned
+    .split(/\s+(?:và|hoặc|với(?!\s+mình)|hay|vs)\s+/i)
+    .map((s) => s.trim());
+  const noiseWords = /^(nhà\s*trọ|phòng\s*trọ|trọ|phòng)\s+/i;
 
   for (const segment of segments) {
-    const phongMatch = segment.match(/phòng\s+(.+)/i);
-    if (!phongMatch) continue;
+    let val = segment.replace(noiseWords, "").trim();
 
-    // Take up to 3 words after "phòng"; stop at trailing stop words
-    const rawWords = phongMatch[1].trim().split(/\s+/).slice(0, 3);
-    while (
-      rawWords.length > 0 &&
-      TITLE_STOP_WORDS.has(rawWords[rawWords.length - 1].toLowerCase())
+    // Ignore generic searches like "3 trọ gần...", "các trọ", "top trọ", "tốt nhất"
+    if (
+      /^(?:[0-9]+|các|những|top)\s/i.test(val) ||
+      /(?:tốt nhất|gần đây)/i.test(val)
     ) {
-      rawWords.pop();
+      continue;
     }
 
-    const fragment = rawWords.join(" ");
-    const firstWord = rawWords[0]?.toLowerCase() ?? "";
+    // Remove trailing stop words
+    const words = val.split(/\s+/);
+    while (
+      words.length > 0 &&
+      TITLE_STOP_WORDS.has(words[words.length - 1].toLowerCase())
+    ) {
+      words.pop();
+    }
 
-    // Skip if empty or first word is a stop word
-    if (fragment && !TITLE_STOP_WORDS.has(firstWord)) {
-      addRef("title", fragment);
+    val = words.join(" ").trim();
+    if (val) {
+      addRef("title", val);
     }
   }
+
+  console.log(
+    `[KnockBot] extractRoomRefs — originalMessage="${message}" extractedRefs=${JSON.stringify(refs)}`,
+  );
 
   return refs;
 }
@@ -255,12 +352,66 @@ export async function getContextRoomsFromHistory(
 // ---------------------------------------------------------------------------
 
 /**
+ * Try to find a room by a user-provided name fragment.
+ *
+ * Matching strategy (in priority order):
+ *  1. Diacritic-insensitive regex on room title
+ *  2. Normalized alias matching (handles "&" ↔ "and")
+ *
+ * Returns null if no match found.
+ */
+export async function findRoomByName(
+  query: string,
+): Promise<IRoom | null> {
+  const normalizedQuery = normalizeForRoomMatch(query);
+
+  // Strategy 1: Build diacritic-insensitive regex AND handle &/and equivalence
+  const regexPattern = query
+    // First normalize & to "and" for regex building, then make it match both
+    .replace(/&/g, "(?:&|and)")
+    .replace(/\band\b/gi, "(?:&|and)")
+    .replace(/a|á|à|ả|ã|ạ|ă|ắ|ằ|ẳ|ẵ|ặ|â|ấ|ầ|ẩ|ẫ|ậ/gi, "[aáàảãạăắằẳẵặâấầẩẫậ]")
+    .replace(/e|é|è|ẻ|ẽ|ẹ|ê|ế|ề|ể|ễ|ệ/gi, "[eéèẻẽẹêếềểễệ]")
+    .replace(/i|í|ì|ỉ|ĩ|ị/gi, "[iíìỉĩị]")
+    .replace(/o|ó|ò|ỏ|õ|ọ|ô|ố|ồ|ổ|ỗ|ộ|ơ|ớ|ờ|ở|ỡ|ợ/gi, "[oóòỏõọôốồổỗộơớờởỡợ]")
+    .replace(/u|ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự/gi, "[uúùủũụưứừửữự]")
+    .replace(/y|ý|ỳ|ỷ|ỹ|ỵ/gi, "[yýỳỷỹỵ]")
+    .replace(/d|đ/gi, "[dđ]");
+
+  const byTitle = await Room.findOne({
+    title: { $regex: regexPattern, $options: "i" },
+    status: "active",
+  })
+    .select(ROOM_COMPARISON_PROJECTION)
+    .lean<IRoom>();
+
+  if (byTitle) return byTitle;
+
+  // Strategy 2: Fetch all active rooms and match by normalized aliases
+  const allRooms = await Room.find({ status: "active" })
+    .select(ROOM_COMPARISON_PROJECTION)
+    .lean<IRoom[]>();
+
+  for (const room of allRooms) {
+    const aliases = generateRoomAliases(room.title);
+    for (const alias of aliases) {
+      // Check if query is a substring of alias or vice versa
+      if (alias.includes(normalizedQuery) || normalizedQuery.includes(alias)) {
+        return room;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Resolve room references to active Room documents.
  *
  * Resolution order:
  *  1. Explicit MongoDB IDs from `refs`
- *  2. Title fragments from `refs` (case-insensitive substring match)
- *  3. Context rooms from session history (used when resolved count < MIN_COMPARE_ROOMS)
+ *  2. Title fragments from `refs` — uses findRoomByName with fuzzy matching
+ *  3. Context rooms from session history (ONLY when user specified < 2 names)
  *
  * Only `active` rooms are included. Hidden / deleted rooms are excluded.
  * Results are capped at MAX_COMPARE_ROOMS even if more refs are given.
@@ -268,8 +419,9 @@ export async function getContextRoomsFromHistory(
 export async function resolveRoomsForComparison(
   refs: RoomReference[],
   contextRoomIds: string[],
-): Promise<IRoom[]> {
+): Promise<{ resolved: IRoom[]; missing: string[] }> {
   const resolved: IRoom[] = [];
+  const missing: string[] = [];
   const seenIds = new Set<string>();
 
   const addRoom = (room: IRoom): void => {
@@ -296,22 +448,24 @@ export async function resolveRoomsForComparison(
     for (const r of byId) addRoom(r);
   }
 
-  // Phase 2 — resolve by title fragment
+  // Phase 2 — resolve by title fragment using fuzzy matching
   for (const ref of refs.filter((r) => r.type === "title")) {
     if (resolved.length >= MAX_COMPARE_ROOMS) break;
 
-    const byTitle = await Room.findOne({
-      title: { $regex: ref.value, $options: "i" },
-      status: "active",
-    })
-      .select(ROOM_COMPARISON_PROJECTION)
-      .lean<IRoom>();
-
-    if (byTitle) addRoom(byTitle);
+    const matched = await findRoomByName(ref.value);
+    if (matched) {
+      addRoom(matched);
+    } else {
+      missing.push(ref.value);
+    }
   }
 
-  // Phase 3 — supplement from context when too few rooms were explicitly named
-  if (resolved.length < MIN_COMPARE_ROOMS && contextRoomIds.length > 0) {
+  console.log(
+    `[KnockBot] resolveRooms — resolved=${resolved.map((r) => r.title)} missing=${JSON.stringify(missing)}`,
+  );
+
+  // Phase 3 — supplement from context ONLY if user did not specify >= 2 valid names
+  if (refs.length < 2 && resolved.length < MIN_COMPARE_ROOMS && contextRoomIds.length > 0) {
     const needed = MAX_COMPARE_ROOMS - resolved.length;
     const supplementIds = contextRoomIds
       .filter((id) => !seenIds.has(id) && Types.ObjectId.isValid(id))
@@ -329,7 +483,7 @@ export async function resolveRoomsForComparison(
     }
   }
 
-  return resolved;
+  return { resolved, missing };
 }
 
 // ---------------------------------------------------------------------------

@@ -134,6 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setRole(null);
     setWalletBalance(0);
+    // Clear quiz session to prevent leak to other accounts
+    ['quiz_step', 'quiz_answers', 'quiz_selected', 'quiz_result', 'quiz_retake'].forEach(k => sessionStorage.removeItem(k));
   };
 
   const changePassword = async (currentPassword: string, newPassword: string) => {

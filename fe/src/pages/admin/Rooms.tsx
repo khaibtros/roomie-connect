@@ -3,6 +3,7 @@ import AdminLayout from '@/layouts/AdminLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api';
+import { normalizeImageUrl } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { ApiRoom, ApiUser, RoomStatus } from '@/types/api';
 
@@ -129,7 +130,16 @@ export default function AdminRooms() {
                 <tr key={r._id}>
                   <td className="px-4 py-3">
                     {r.images?.[0] ? (
-                      <img src={r.images[0]} alt="" className="h-12 w-20 bg-slate-100 rounded object-cover" />
+                      <img 
+                        src={normalizeImageUrl(r.images[0])} 
+                        alt="" 
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = '/placeholder-room.jpg';
+                        }}
+                        className="h-12 w-20 bg-slate-100 rounded object-cover" 
+                      />
                     ) : (
                       <div className="h-12 w-20 bg-slate-100 rounded" />
                     )}
